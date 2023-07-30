@@ -47,7 +47,8 @@ class EventLoop:
     def accept_connection_callback(future: Future, server_socket: socket.socket):
         client_socket, client_address = server_socket.accept()
         print(f'new client with address: {client_address}')
-        client_socket.setblocking(False)
+        client_socket.sendall(b'HTTP/1.0 200 OK\n\nHello World')
+        client_socket.shutdown(1)
         future.set_result(client_socket)
 
     @staticmethod

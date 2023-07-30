@@ -13,8 +13,7 @@ async def main(event_loop: EventLoop):
     sock = create_server_socket()
     while True:
         connection_future = event_loop.register_server_socket(sock)
-        client_socket = await connection_future
-        event_loop.add_coroutine(listen_client(event_loop, client_socket))
+        await connection_future
 
 
 if __name__ == '__main__':
