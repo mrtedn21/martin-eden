@@ -1,21 +1,35 @@
-from custom_asyncio import EventLoop
-import socket
-from networking import create_server_socket
+import asyncio
+import uvloop
 
 
-async def listen_client(event_loop: EventLoop, client_socket: socket.socket):
-    while True:
-        client_connection_future = event_loop.register_client_socket(client_socket)
-        await client_connection_future
+class EchoServerProtocol(asyncio.Protocol):
+    def __init__(self):
+        super().__init__()
+        self.transport = None
+
+    def connection_made(self, transport: asyncio.Transport):
+        peername = transport.get_extra_info('peername')
+        print(f'connection from {peername}')
+        self.transport = transport
+
+    def data_received(self, data: bytes):
+        message = data.decode()
+        print(f'get data: {message}')
+
+        self.transport.write(b'HTTP/1.0 200 OK\n\nHello World')
+        self.transport.close()
 
 
-async def main(event_loop: EventLoop):
-    sock = create_server_socket()
-    while True:
-        connection_future = event_loop.register_server_socket(sock)
-        await connection_future
+async def main():
+    event_loop = asyncio.get_running_loop()
+    server = await event_loop.create_server(
+        lambda: EchoServerProtocol(),
+        '0', 8001,
+    )
+    async with server:
+        await server.serve_forever()
 
 
 if __name__ == '__main__':
-    loop = EventLoop()
-    loop.run(main(loop))
+    uvloop.install()
+    asyncio.run(main())

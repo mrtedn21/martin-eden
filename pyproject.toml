@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "framework"
-version = "0.2.0"
+version = "0.3.0"
 description = "custom async backend framework on sockets and without asyncio"
 authors = ["mrtedn21 <bezgin.sasha06@gmail.com>"]
 readme = "README.md"
