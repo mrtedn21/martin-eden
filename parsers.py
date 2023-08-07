@@ -6,7 +6,8 @@
 
 class HttpHeadersParser:
     def __init__(self, message: str):
-        self.lines_of_header = message.split('\n')
+        self.message: str = message
+        self.lines_of_header: list[str] = message.split('\n')
 
     def get_method_name(self) -> str:
         # Method name is first word of first line
