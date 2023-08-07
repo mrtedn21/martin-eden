@@ -6,7 +6,7 @@ routes: DictOfRoutes = {}
 
 
 def _register_route(
-    path: str, methods: Iterable[str], controller: Callable
+    path: str, methods: Iterable[str], controller: Callable,
 ) -> None:
     new_path = routes.setdefault(path, {})
     for method in methods:
@@ -21,6 +21,7 @@ def get_controller(path: str, method: str):
 
 def register_route(path, methods):
     """This is decorator only, wrapping over _register_route"""
+
     def wrap(func):
         def wrapped_f(*args, **kwargs):
             func(*args, **kwargs)

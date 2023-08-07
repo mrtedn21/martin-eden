@@ -1,8 +1,9 @@
 import asyncio
+
 import uvloop
 
 from parsers import HttpHeadersParser
-from routing import register_route, get_controller
+from routing import get_controller, register_route
 
 
 @register_route('/', ('get',))
