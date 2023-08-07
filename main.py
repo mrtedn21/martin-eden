@@ -7,8 +7,8 @@ from routing import get_controller, register_route
 
 
 @register_route('/', ('get',))
-def kek():
-    print('i am working')
+def root() -> str:
+    return 'Hello World!'
 
 
 class EchoServerProtocol(asyncio.Protocol):
@@ -33,9 +33,9 @@ class EchoServerProtocol(asyncio.Protocol):
         except KeyError:
             # temp decision for not existing paths
             return
-        controller()
+        response: str = controller()
 
-        self.transport.write(b'HTTP/1.0 200 OK\n\nHello World')
+        self.transport.write(b'HTTP/1.0 200 OK\n\n' + response.encode('utf8'))
         self.transport.close()
 
 
