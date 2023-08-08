@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import (AsyncAttrs, async_sessionmaker,
                                     create_async_engine)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from parsers import HttpHeadersParser
+from http_headers import HttpHeadersParser, create_response_headers
 from routing import get_controller, register_route
 
 
@@ -98,12 +98,9 @@ async def handle_request(
         return
     response: str = await controller()
 
+    headers = create_response_headers(200, 'application/json')
     await loop.sock_sendall(
-        client_socket, (
-            'HTTP/1.0 200 OK\n'
-            'Content-Type: application/json;charset=UTF-8\n\n'
-            + response
-        ).encode('utf8'),
+        client_socket, (headers + response).encode('utf8'),
     )
     client_socket.close()
 
