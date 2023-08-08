@@ -1,13 +1,39 @@
 import asyncio
 import socket
 from asyncio import AbstractEventLoop
+from datetime import datetime
+
+from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from parsers import HttpHeadersParser
 from routing import get_controller, register_route
 
 
+class Base(AsyncAttrs, DeclarativeBase):
+    pass
+
+
+class User(Base):
+    __tablename__ = 'users'
+
+    pk: Mapped[int] = mapped_column(primary_key=True)
+    first_name: Mapped[str]
+    last_name: Mapped[str]
+    birth_date: Mapped[datetime]
+
+
 @register_route('/', ('get',))
 async def root() -> str:
+    engine = create_async_engine(
+        'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
+        echo=True,
+    )
+
+    async with engine.begin() as conn:
+        print('now will create tables')
+        await conn.run_sync(Base.metadata.create_all)
+        print('tables has created')
     return 'Hello World!'
 
 
