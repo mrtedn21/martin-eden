@@ -1,55 +1,60 @@
 import asyncio
-
-import uvloop
+import socket
+from asyncio import AbstractEventLoop
 
 from parsers import HttpHeadersParser
 from routing import get_controller, register_route
 
 
 @register_route('/', ('get',))
-def root() -> str:
+async def root() -> str:
     return 'Hello World!'
 
 
-class EchoServerProtocol(asyncio.Protocol):
-    def __init__(self):
-        super().__init__()
-        self.transport = None
+async def handle_request(
+    client_socket: socket.socket, loop: AbstractEventLoop,
+):
+    data = await loop.sock_recv(client_socket, 1024)
+    message = data.decode()
 
-    def connection_made(self, transport: asyncio.Transport):
-        peername = transport.get_extra_info('peername')
-        print(f'got connection from {peername}')
-        self.transport = transport
+    parser = HttpHeadersParser(message)
+    path = parser.get_path()
+    method = parser.get_method_name()
 
-    def data_received(self, data: bytes):
-        message = data.decode()
+    try:
+        controller = get_controller(path, method)
+    except KeyError:
+        # temp decision for not existing paths
+        return
+    response: str = await controller()
 
-        parser = HttpHeadersParser(message)
-        path = parser.get_path()
-        method = parser.get_method_name()
+    await loop.sock_sendall(
+        client_socket, b'HTTP/1.0 200 OK\n\n' + response.encode('utf8'),
+    )
+    client_socket.close()
 
-        try:
-            controller = get_controller(path, method)
-        except KeyError:
-            # temp decision for not existing paths
-            return
-        response: str = controller()
 
-        self.transport.write(b'HTTP/1.0 200 OK\n\n' + response.encode('utf8'))
-        self.transport.close()
+async def listen_for_connection(
+    server_socket: socket, loop: AbstractEventLoop,
+):
+    while True:
+        connection, address = await loop.sock_accept(server_socket)
+        print(f'get request for connection from {address}')
+        await asyncio.create_task(handle_request(connection, loop))
 
 
 async def main():
-    event_loop = asyncio.get_running_loop()
-    event_loop.set_debug(True)
-    server = await event_loop.create_server(
-        lambda: EchoServerProtocol(),
-        '0', 8001,
-    )
-    async with server:
-        await server.serve_forever()
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    server_address = ('localhost', 8001)
+    server_socket.setblocking(False)
+    server_socket.bind(server_address)
+    server_socket.listen()
+
+    await listen_for_connection(server_socket, asyncio.get_event_loop())
 
 
 if __name__ == '__main__':
-    uvloop.install()
-    asyncio.run(main())
+    # uvloop.install()
+    asyncio.run(main(), debug=True)
