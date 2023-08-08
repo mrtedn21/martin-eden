@@ -1,9 +1,12 @@
 import asyncio
+import json
 import socket
 from asyncio import AbstractEventLoop
 from datetime import datetime
 
-from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import (AsyncAttrs, async_sessionmaker,
+                                    create_async_engine)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from parsers import HttpHeadersParser
@@ -12,6 +15,23 @@ from routing import get_controller, register_route
 
 class Base(AsyncAttrs, DeclarativeBase):
     pass
+
+
+def get_json_from_orm_object(some_object):
+    result_data = {}
+    for attr in dir(some_object):
+        attr_type = type(getattr(some_object, attr))
+        if attr.startswith('_'):
+            continue
+
+        if attr_type in (str, int):
+            result_data[attr] = getattr(some_object, attr)
+        elif attr_type == datetime:
+            date_time: datetime = getattr(some_object, attr)
+            str_date_time = date_time.strftime('%d-%m-%Y')
+            result_data[attr] = str_date_time
+
+    return result_data
 
 
 class User(Base):
@@ -34,7 +54,31 @@ async def root() -> str:
         print('now will create tables')
         await conn.run_sync(Base.metadata.create_all)
         print('tables has created')
-    return 'Hello World!'
+
+    async_session = async_sessionmaker(engine, expire_on_commit=False)
+    async with async_session() as session:
+        async with session.begin():
+            session.add_all([
+                User(
+                    first_name='test1',
+                    last_name='test1',
+                    birth_date=datetime.now(),
+                ),
+                User(
+                    first_name='test2',
+                    last_name='test2',
+                    birth_date=datetime.now(),
+                ),
+            ])
+
+    async with async_session() as session:
+        sql_query = select(User)
+        result = await session.execute(sql_query)
+        users = result.scalars().all()
+        list_of_users = [get_json_from_orm_object(user) for user in users]
+
+    await engine.dispose()
+    return json.dumps(list_of_users, ensure_ascii=False)
 
 
 async def handle_request(
@@ -55,7 +99,11 @@ async def handle_request(
     response: str = await controller()
 
     await loop.sock_sendall(
-        client_socket, b'HTTP/1.0 200 OK\n\n' + response.encode('utf8'),
+        client_socket, (
+            'HTTP/1.0 200 OK\n'
+            'Content-Type: application/json;charset=UTF-8\n\n'
+            + response
+        ).encode('utf8'),
     )
     client_socket.close()
 
