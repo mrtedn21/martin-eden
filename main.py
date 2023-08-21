@@ -1,8 +1,9 @@
 import asyncio
-import json
+from pydantic import ConfigDict
 import socket
 from asyncio import AbstractEventLoop
 from datetime import datetime
+from pydantic import create_model
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (AsyncAttrs, async_sessionmaker,
@@ -34,13 +35,58 @@ def get_json_from_orm_object(some_object):
     return result_data
 
 
+class SqlAlchemyToPydantic(type(Base)):
+    """
+    Metaclass that look and sql alchemy model fields, creates pydantic model
+
+    Example:
+    class NewModel(SomeSqlAlchemyModel, metaclass=SqlAlchemyToPydantic):
+        fields = '__all__'
+
+    fields attribute can be on of:
+    * '__all__' - means that pydantic model will be with all fields of alchemy model
+    * '__without_pk__' - means will be all fields instead of pk
+    * tuple[str] - is tuple of fields that will be used
+    """
+    def __new__(cls, name, bases, fields):
+        origin_model = bases[0]
+
+        origin_model_field_names = [
+            field_name for field_name in dir(origin_model)
+            if not field_name.startswith('_')
+            and field_name not in ('registry', 'metadata', 'awaitable_attrs')
+        ]
+
+        defined_fields = fields['fields']
+        if defined_fields == '__all__':
+            defined_fields = origin_model_field_names
+        elif defined_fields == '__without_pk__':
+            defined_fields = tuple(set(origin_model_field_names) - {'pk'})
+
+        result_fields = {
+            field_name: (getattr(origin_model, field_name).type.python_type, ...)
+            for field_name in defined_fields
+            if field_name in origin_model_field_names
+        }
+        return create_model(
+            'UserReadModel',
+            **result_fields,
+            __config__=ConfigDict(from_attributes=True),
+        )
+
+
 class User(Base):
     __tablename__ = 'users'
 
     pk: Mapped[int] = mapped_column(primary_key=True)
     first_name: Mapped[str]
     last_name: Mapped[str]
+    # TODO fix datetime to date
     birth_date: Mapped[datetime]
+
+
+class UserReadModel(User, metaclass=SqlAlchemyToPydantic):
+    fields = '__all__'
 
 
 @register_route('/', ('get',))
@@ -56,29 +102,30 @@ async def root() -> str:
         print('tables has created')
 
     async_session = async_sessionmaker(engine, expire_on_commit=False)
-    async with async_session() as session:
-        async with session.begin():
-            session.add_all([
-                User(
-                    first_name='test1',
-                    last_name='test1',
-                    birth_date=datetime.now(),
-                ),
-                User(
-                    first_name='test2',
-                    last_name='test2',
-                    birth_date=datetime.now(),
-                ),
-            ])
+    #async with async_session() as session:
+    #    async with session.begin():
+    #        session.add_all([
+    #            UserOrm(
+    #                first_name='test1',
+    #                last_name='test1',
+    #                birth_date=datetime.now(),
+    #            ),
+    #            UserOrm(
+    #                first_name='test2',
+    #                last_name='test2',
+    #                birth_date=datetime.now(),
+    #            ),
+    #        ])
 
     async with async_session() as session:
         sql_query = select(User)
         result = await session.execute(sql_query)
         users = result.scalars().all()
-        list_of_users = [get_json_from_orm_object(user) for user in users]
+
+        pyd_user = UserReadModel.model_validate(users[0])
 
     await engine.dispose()
-    return json.dumps(list_of_users, ensure_ascii=False)
+    return pyd_user.model_dump_json()
 
 
 async def handle_request(

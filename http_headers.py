@@ -31,5 +31,6 @@ def create_response_headers(status: int, content_type: str):
     """
     return (
         f'HTTP/1.0 {status}\n'
+        f'Access-Control-Allow-Origin: *\n'
         f'Content-Type: {content_type};charset=UTF-8\n\n'
     )
