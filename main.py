@@ -1,8 +1,10 @@
+from pathlib import Path
+import json
 import asyncio
 from pydantic import ConfigDict
 import socket
 from asyncio import AbstractEventLoop
-from datetime import datetime
+from datetime import datetime, date
 from pydantic import create_model
 
 from sqlalchemy import select
@@ -75,17 +77,16 @@ class SqlAlchemyToPydantic(type(Base)):
         )
 
 
-class User(Base):
+class UserOrm(Base):
     __tablename__ = 'users'
 
     pk: Mapped[int] = mapped_column(primary_key=True)
     first_name: Mapped[str]
     last_name: Mapped[str]
-    # TODO fix datetime to date
-    birth_date: Mapped[datetime]
+    birth_date: Mapped[date]
 
 
-class UserReadModel(User, metaclass=SqlAlchemyToPydantic):
+class UserReadModel(UserOrm, metaclass=SqlAlchemyToPydantic):
     fields = '__all__'
 
 
@@ -102,30 +103,31 @@ async def root() -> str:
         print('tables has created')
 
     async_session = async_sessionmaker(engine, expire_on_commit=False)
-    #async with async_session() as session:
-    #    async with session.begin():
-    #        session.add_all([
-    #            UserOrm(
-    #                first_name='test1',
-    #                last_name='test1',
-    #                birth_date=datetime.now(),
-    #            ),
-    #            UserOrm(
-    #                first_name='test2',
-    #                last_name='test2',
-    #                birth_date=datetime.now(),
-    #            ),
-    #        ])
+    async with async_session() as session:
+        async with session.begin():
+            session.add_all([
+                UserOrm(
+                    first_name='test1',
+                    last_name='test1',
+                    birth_date=datetime.now(),
+                ),
+                UserOrm(
+                    first_name='test2',
+                    last_name='test2',
+                    birth_date=datetime.now(),
+                ),
+            ])
 
     async with async_session() as session:
-        sql_query = select(User)
+        sql_query = select(UserOrm)
         result = await session.execute(sql_query)
         users = result.scalars().all()
 
         pyd_user = UserReadModel.model_validate(users[0])
 
     await engine.dispose()
-    return pyd_user.model_dump_json()
+    with open(Path.cwd() / 'example.json') as f:
+        return f.read()
 
 
 async def handle_request(
