@@ -7,7 +7,18 @@
 class HttpHeadersParser:
     def __init__(self, message: str):
         self.message: str = message
-        self.lines_of_header: list[str] = message.split('\n')
+        self._detect_line_break_char()
+        self.lines_of_header: list[str] = message.split(
+            self.line_break_char
+        )
+
+    def _detect_line_break_char(self):
+        self.line_break_char: str = '\r'
+
+        if '\r\n' in self.message:
+            self.line_break_char = '\r\n'
+        elif '\n' in self.message:
+            self.line_break_char = '\n'
 
     def get_method_name(self) -> str:
         # Method name is first word of first line
@@ -20,6 +31,14 @@ class HttpHeadersParser:
         first_line = self.lines_of_header[0]
         second_word = first_line.split(' ')[1]
         return second_word
+
+    def get_body(self):
+        position_of_body_starts = (
+            self.message.find(self.line_break_char * 2) +
+            len(self.line_break_char * 2)
+        )
+        return self.message[position_of_body_starts:]
+
 
 
 def create_response_headers(status: int, content_type: str):

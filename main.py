@@ -95,6 +95,31 @@ class UserListModel(BaseModel):
     items: list[UserReadModel]
 
 
+@register_route('/users/', ('post',))
+async def create_user(post_body) -> dict:
+    engine = create_async_engine(
+        'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
+        echo=True,
+    )
+
+    async with engine.begin() as conn:
+        print('now will create tables')
+        await conn.run_sync(Base.metadata.create_all)
+        print('tables has created')
+
+    async_session = async_sessionmaker(engine, expire_on_commit=False)
+    async with async_session() as session:
+        async with session.begin():
+            session.add(UserOrm(
+                first_name='test2',
+                last_name='test2',
+                birth_date=datetime.now(),
+            ))
+
+    await engine.dispose()
+    return '{"test": "result"}'
+
+
 @register_route('/users/', ('get',))
 async def get_users() -> str:
     engine = create_async_engine(
@@ -146,12 +171,16 @@ async def handle_request(
     path = parser.get_path()
     method = parser.get_method_name()
 
+    body = None
+    if method == 'POST':
+        body = parser.get_body()
+
     try:
         controller = get_controller(path, method)
     except KeyError:
         # temp decision for not existing paths
         return
-    response: str = await controller()
+    response: str = await controller(json.loads(body))
 
     headers = create_response_headers(200, 'application/json')
     await loop.sock_sendall(
