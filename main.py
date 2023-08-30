@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 import asyncio
-from pydantic import ConfigDict
+from pydantic import ConfigDict, BaseModel
 import socket
 from asyncio import AbstractEventLoop
 from datetime import datetime, date
@@ -90,8 +90,13 @@ class UserReadModel(UserOrm, metaclass=SqlAlchemyToPydantic):
     fields = '__all__'
 
 
-@register_route('/', ('get',))
-async def root() -> str:
+class UserListModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    items: list[UserReadModel]
+
+
+@register_route('/users/', ('get',))
+async def get_users() -> str:
     engine = create_async_engine(
         'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
         echo=True,
@@ -103,31 +108,32 @@ async def root() -> str:
         print('tables has created')
 
     async_session = async_sessionmaker(engine, expire_on_commit=False)
-    async with async_session() as session:
-        async with session.begin():
-            session.add_all([
-                UserOrm(
-                    first_name='test1',
-                    last_name='test1',
-                    birth_date=datetime.now(),
-                ),
-                UserOrm(
-                    first_name='test2',
-                    last_name='test2',
-                    birth_date=datetime.now(),
-                ),
-            ])
+    #async with async_session() as session:
+    #    async with session.begin():
+    #        session.add_all([
+    #            UserOrm(
+    #                first_name='test1',
+    #                last_name='test1',
+    #                birth_date=datetime.now(),
+    #            ),
+    #            UserOrm(
+    #                first_name='test2',
+    #                last_name='test2',
+    #                birth_date=datetime.now(),
+    #            ),
+    #        ])
 
     async with async_session() as session:
         sql_query = select(UserOrm)
         result = await session.execute(sql_query)
         users = result.scalars().all()
 
-        pyd_user = UserReadModel.model_validate(users[0])
+        pyd_users = UserListModel.model_validate({'items': users})
 
     await engine.dispose()
-    with open(Path.cwd() / 'example.json') as f:
-        return f.read()
+    return pyd_users.model_dump_json()
+    #with open(Path.cwd() / 'example.json') as f:
+    #    return f.read()
 
 
 async def handle_request(
