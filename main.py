@@ -90,13 +90,17 @@ class UserReadModel(UserOrm, metaclass=SqlAlchemyToPydantic):
     fields = '__all__'
 
 
+class UserCreateModel(UserOrm, metaclass=SqlAlchemyToPydantic):
+    fields = '__without_pk__'
+
+
 class UserListModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     items: list[UserReadModel]
 
 
 @register_route('/users/', ('post',))
-async def create_user(post_body) -> dict:
+async def create_user(new_user: UserCreateModel) -> dict:
     engine = create_async_engine(
         'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
         echo=True,
@@ -110,14 +114,10 @@ async def create_user(post_body) -> dict:
     async_session = async_sessionmaker(engine, expire_on_commit=False)
     async with async_session() as session:
         async with session.begin():
-            session.add(UserOrm(
-                first_name='test2',
-                last_name='test2',
-                birth_date=datetime.now(),
-            ))
+            session.add(UserOrm(**dict(new_user)))
 
     await engine.dispose()
-    return '{"test": "result"}'
+    return new_user.model_dump_json()
 
 
 @register_route('/users/', ('get',))
@@ -133,21 +133,6 @@ async def get_users() -> str:
         print('tables has created')
 
     async_session = async_sessionmaker(engine, expire_on_commit=False)
-    #async with async_session() as session:
-    #    async with session.begin():
-    #        session.add_all([
-    #            UserOrm(
-    #                first_name='test1',
-    #                last_name='test1',
-    #                birth_date=datetime.now(),
-    #            ),
-    #            UserOrm(
-    #                first_name='test2',
-    #                last_name='test2',
-    #                birth_date=datetime.now(),
-    #            ),
-    #        ])
-
     async with async_session() as session:
         sql_query = select(UserOrm)
         result = await session.execute(sql_query)
@@ -157,8 +142,6 @@ async def get_users() -> str:
 
     await engine.dispose()
     return pyd_users.model_dump_json()
-    #with open(Path.cwd() / 'example.json') as f:
-    #    return f.read()
 
 
 async def handle_request(
@@ -171,16 +154,23 @@ async def handle_request(
     path = parser.get_path()
     method = parser.get_method_name()
 
-    body = None
-    if method == 'POST':
-        body = parser.get_body()
-
     try:
         controller = get_controller(path, method)
     except KeyError:
         # temp decision for not existing paths
         return
-    response: str = await controller(json.loads(body))
+
+    if method == 'POST':
+        types = controller.__annotations__
+        for arg_name, arg_type in types.items():
+            if issubclass(arg_type, BaseModel):
+                body = parser.get_body()
+                pydantic_object = arg_type.model_validate_json(body)
+                response: str = await controller(**{arg_name: pydantic_object})
+                break
+
+    else:
+        response: str = await controller()
 
     headers = create_response_headers(200, 'application/json')
     await loop.sock_sendall(
