@@ -10,6 +10,7 @@ from pydantic import create_model
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (AsyncAttrs, async_sessionmaker,
                                     create_async_engine)
+from pydantic.json_schema import models_json_schema
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from http_headers import HttpHeadersParser, create_response_headers
@@ -86,7 +87,7 @@ class UserOrm(Base):
     birth_date: Mapped[date]
 
 
-class UserReadModel(UserOrm, metaclass=SqlAlchemyToPydantic):
+class UserGetModel(UserOrm, metaclass=SqlAlchemyToPydantic):
     fields = '__all__'
 
 
@@ -94,9 +95,9 @@ class UserCreateModel(UserOrm, metaclass=SqlAlchemyToPydantic):
     fields = '__without_pk__'
 
 
-class UserListModel(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    items: list[UserReadModel]
+#class UserListModel(BaseModel):
+#    model_config = ConfigDict(from_attributes=True)
+#    items: list[UserReadModel]
 
 
 @register_route('/users/', ('post',))
@@ -120,7 +121,7 @@ async def create_user(new_user: UserCreateModel) -> dict:
     return new_user.model_dump_json()
 
 
-@register_route('/users/', ('get',))
+@register_route('/', ('get',))
 async def get_users() -> str:
     engine = create_async_engine(
         'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
@@ -138,10 +139,15 @@ async def get_users() -> str:
         result = await session.execute(sql_query)
         users = result.scalars().all()
 
-        pyd_users = UserListModel.model_validate({'items': users})
+        #pyd_users = UserListModel.model_validate({'items': users})
 
     await engine.dispose()
-    return pyd_users.model_dump_json()
+    #return pyd_users.model_dump_json()
+    with open('example.json', 'r') as file:
+        openapi = json.load(file)
+        openapi['components']['schemas']['UserRead'] = UserGetModel.model_json_schema()
+        openapi['components']['schemas']['UserCreate'] = UserCreateModel.model_json_schema()
+        return json.dumps(openapi)
 
 
 async def handle_request(
