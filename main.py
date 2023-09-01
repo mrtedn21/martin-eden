@@ -1,4 +1,5 @@
 from pathlib import Path
+from openapi import openapi_object, add_schema
 import json
 import asyncio
 from pydantic import ConfigDict, BaseModel
@@ -40,7 +41,8 @@ def get_json_from_orm_object(some_object):
 
 class SqlAlchemyToPydantic(type(Base)):
     """
-    Metaclass that look and sql alchemy model fields, creates pydantic model
+    Metaclass that get sql alchemy model fields, creates pydantic model based on them
+    And moreover, metaclass extends schemas of openapi object with models it creates
 
     Example:
     class NewModel(SomeSqlAlchemyModel, metaclass=SqlAlchemyToPydantic):
@@ -71,11 +73,13 @@ class SqlAlchemyToPydantic(type(Base)):
             for field_name in defined_fields
             if field_name in origin_model_field_names
         }
-        return create_model(
-            'UserReadModel',
+        result_model = create_model(
+            name,
             **result_fields,
             __config__=ConfigDict(from_attributes=True),
         )
+        add_schema(name, result_model)
+        return result_model
 
 
 class UserOrm(Base):
@@ -142,12 +146,7 @@ async def get_users() -> str:
         #pyd_users = UserListModel.model_validate({'items': users})
 
     await engine.dispose()
-    #return pyd_users.model_dump_json()
-    with open('example.json', 'r') as file:
-        openapi = json.load(file)
-        openapi['components']['schemas']['UserRead'] = UserGetModel.model_json_schema()
-        openapi['components']['schemas']['UserCreate'] = UserCreateModel.model_json_schema()
-        return json.dumps(openapi)
+    return json.dumps(openapi_object)
 
 
 async def handle_request(
