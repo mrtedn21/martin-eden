@@ -22,7 +22,7 @@ class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
-def get_json_from_orm_object(some_object):
+def get_dict_from_orm_object(some_object):
     result_data = {}
     for attr in dir(some_object):
         attr_type = type(getattr(some_object, attr))
@@ -31,9 +31,9 @@ def get_json_from_orm_object(some_object):
 
         if attr_type in (str, int):
             result_data[attr] = getattr(some_object, attr)
-        elif attr_type == datetime:
-            date_time: datetime = getattr(some_object, attr)
-            str_date_time = date_time.strftime('%d-%m-%Y')
+        elif attr_type == date:
+            attr_date: date = getattr(some_object, attr)
+            str_date_time = attr_date.strftime('%d-%m-%Y')
             result_data[attr] = str_date_time
 
     return result_data
@@ -125,7 +125,7 @@ async def create_user(new_user: UserCreateModel) -> dict:
     return new_user.model_dump_json()
 
 
-@register_route('/', ('get',))
+@register_route('/users/', ('get',))
 async def get_users() -> str:
     engine = create_async_engine(
         'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
@@ -142,10 +142,14 @@ async def get_users() -> str:
         sql_query = select(UserOrm)
         result = await session.execute(sql_query)
         users = result.scalars().all()
-
-        #pyd_users = UserListModel.model_validate({'items': users})
+        user_dicts = list(map(get_dict_from_orm_object, users))
 
     await engine.dispose()
+    return json.dumps(user_dicts)
+
+
+@register_route('/', ('get',))
+async def get_openapi_schema() -> str:
     return json.dumps(openapi_object)
 
 
