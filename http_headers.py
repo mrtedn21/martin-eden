@@ -40,7 +40,6 @@ class HttpHeadersParser:
         return self.message[position_of_body_starts:]
 
 
-
 def create_response_headers(status: int, content_type: str):
     """
     status is number, 200 or 404

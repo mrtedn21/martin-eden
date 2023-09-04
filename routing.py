@@ -21,7 +21,7 @@ def _register_route(
             path.replace('/', '') + '_' + method.lower()
         )
         openapi_responses = openapi_new_method.setdefault('responses', {})
-        openapi_model_schema = (
+        openapi_model_response_schema = (
             openapi_responses
             .setdefault('200', {})
             .setdefault('content', {})
@@ -29,13 +29,19 @@ def _register_route(
             .setdefault('schema', {})
         )
 
+        openapi_model_request_schema = (
+            openapi_new_method
+            .setdefault('requestBody', {})
+            .setdefault('content', {})
+            .setdefault('application/json', {})
+            .setdefault('schema', {})
+        )
+
         for arg, arg_type in controller.__annotations__.items():
             if issubclass(arg_type, BaseModel):
-                openapi_model_schema['$ref'] = (
-                    f'#/components/schemas/{arg_type.__name__}'
-                )
-
-
+                schema_path = f'#/components/schemas/{arg_type.__name__}'
+                openapi_model_response_schema['$ref'] = schema_path
+                openapi_model_request_schema['$ref'] = schema_path
 
 
 def get_controller(path: str, method: str):
