@@ -148,7 +148,7 @@ async def get_users() -> str:
     return json.dumps(user_dicts)
 
 
-@register_route('/schema', ('get',))
+@register_route('/schema/', ('get',))
 async def get_openapi_schema() -> str:
     return json.dumps(openapi_object)
 
