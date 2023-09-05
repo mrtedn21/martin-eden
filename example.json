@@ -23,36 +23,7 @@
     "produces": [
         "application/json"
     ],
-    "paths": {
-        "/pets": {
-            "get": {
-                "requestBody": {
-                    "description": "Information about a new pet in the system",
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/Pet"
-                            }
-                        }
-                    }
-                },
-                "description": "Returns all pets from the system that the user has access to",
-                "operationId": "findPets",
-                "responses": {
-                    "200": {
-                        "description": "pet response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SomeModel"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    },
+    "paths": {},
     "components": {
         "schemas": {}
     }
