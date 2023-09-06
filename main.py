@@ -1,5 +1,5 @@
 from pathlib import Path
-from openapi import openapi_object, add_schema
+from openapi import openapi_object, add_openapi_schema
 import json
 import asyncio
 from pydantic import ConfigDict, BaseModel
@@ -78,7 +78,7 @@ class SqlAlchemyToPydantic(type(Base)):
             **result_fields,
             __config__=ConfigDict(from_attributes=True),
         )
-        add_schema(name, result_model)
+        add_openapi_schema(name, result_model)
         return result_model
 
 
@@ -104,29 +104,8 @@ class UserCreateModel(UserOrm, metaclass=SqlAlchemyToPydantic):
 #    items: list[UserReadModel]
 
 
-@register_route('/users/', ('post',))
-async def create_user(new_user: UserCreateModel) -> dict:
-    engine = create_async_engine(
-        'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
-        echo=True,
-    )
-
-    async with engine.begin() as conn:
-        print('now will create tables')
-        await conn.run_sync(Base.metadata.create_all)
-        print('tables has created')
-
-    async_session = async_sessionmaker(engine, expire_on_commit=False)
-    async with async_session() as session:
-        async with session.begin():
-            session.add(UserOrm(**dict(new_user)))
-
-    await engine.dispose()
-    return new_user.model_dump_json()
-
-
 @register_route('/users/', ('get',))
-async def get_users() -> str:
+async def get_users() -> list[UserGetModel]:
     engine = create_async_engine(
         'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
         echo=True,
@@ -146,6 +125,27 @@ async def get_users() -> str:
 
     await engine.dispose()
     return json.dumps(user_dicts)
+
+
+@register_route('/users/', ('post',))
+async def create_user(new_user: UserCreateModel) -> UserCreateModel:
+    engine = create_async_engine(
+        'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
+        echo=True,
+    )
+
+    async with engine.begin() as conn:
+        print('now will create tables')
+        await conn.run_sync(Base.metadata.create_all)
+        print('tables has created')
+
+    async_session = async_sessionmaker(engine, expire_on_commit=False)
+    async with async_session() as session:
+        async with session.begin():
+            session.add(UserOrm(**dict(new_user)))
+
+    await engine.dispose()
+    return new_user.model_dump_json()
 
 
 @register_route('/schema/', ('get',))
