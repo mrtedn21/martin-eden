@@ -25,7 +25,7 @@ def add_openapi_schema(name: str, model: BaseModel):
     openapi_object['components']['schemas'][name] = model.model_json_schema()
 
 
-def set_response_for_openapi_method(openapi_method, controller):
+def set_response_for_openapi_method(openapi_method: dict, controller: Callable):
     return_annotation = controller.__annotations__.pop('return', None)
     if not return_annotation:
         return
@@ -43,7 +43,7 @@ def set_response_for_openapi_method(openapi_method, controller):
         response_schema['$ref'] = SCHEMA_PATH_TEMPLATE.format(return_annotation.__name__)
 
 
-def set_request_for_openapi_method(openapi_method, controller):
+def set_request_for_openapi_method(openapi_method: dict, controller: Callable):
     for arg, arg_type in controller.__annotations__.items():
         if issubclass(arg_type, BaseModel):
             request_schema = dict_set(
@@ -70,7 +70,7 @@ def add_openapi_path(path: str, method: str, controller: Callable):
     set_request_for_openapi_method(openapi_new_method, controller)
 
 
-def parse_complex_annotation(annotation: GenericAlias):
+def parse_complex_annotation(annotation: GenericAlias) -> tuple[type, type]:
     """If annotation is complex type hint, like list[UserGetModel], then
     the function will return outer type and inner type. In example
     with list[UserGetModel] return types will be list and UserGetModel."""
@@ -81,5 +81,3 @@ def parse_complex_annotation(annotation: GenericAlias):
         inner_type = annotation.__args__[0]
         if issubclass(inner_type, BaseModel):
             return list, inner_type
-
-
