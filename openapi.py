@@ -54,6 +54,11 @@ def set_request_for_openapi_method(openapi_method, controller):
 
 
 def add_openapi_path(path: str, method: str, controller: Callable):
+    # in the framework /schema/ is used for openapi, therefore no need
+    # create openapi description of method that create openapi schema
+    if path == '/schema/':
+        return
+
     openapi_new_method = dict_set(
         openapi_object, f'paths.{path}.{method}', {},
     )
