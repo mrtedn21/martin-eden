@@ -7,6 +7,7 @@ import socket
 from asyncio import AbstractEventLoop
 from datetime import datetime, date
 from pydantic import create_model
+from database import SqlAlchemyToPydantic, UserOrm, DataBase
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (AsyncAttrs, async_sessionmaker,
@@ -17,9 +18,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from http_headers import HttpHeadersParser, create_response_headers
 from routing import get_controller, register_route
 
-
-class Base(AsyncAttrs, DeclarativeBase):
-    pass
+db = DataBase()
 
 
 def get_dict_from_orm_object(some_object):
@@ -39,58 +38,6 @@ def get_dict_from_orm_object(some_object):
     return result_data
 
 
-class SqlAlchemyToPydantic(type(Base)):
-    """
-    Metaclass that get sql alchemy model fields, creates pydantic model based on them
-    And moreover, metaclass extends schemas of openapi object with models it creates
-
-    Example:
-    class NewModel(SomeSqlAlchemyModel, metaclass=SqlAlchemyToPydantic):
-        fields = '__all__'
-
-    fields attribute can be on of:
-    * '__all__' - means that pydantic model will be with all fields of alchemy model
-    * '__without_pk__' - means will be all fields instead of pk
-    * tuple[str] - is tuple of fields that will be used
-    """
-    def __new__(cls, name, bases, fields):
-        origin_model = bases[0]
-
-        origin_model_field_names = [
-            field_name for field_name in dir(origin_model)
-            if not field_name.startswith('_')
-            and field_name not in ('registry', 'metadata', 'awaitable_attrs')
-        ]
-
-        defined_fields = fields['fields']
-        if defined_fields == '__all__':
-            defined_fields = origin_model_field_names
-        elif defined_fields == '__without_pk__':
-            defined_fields = tuple(set(origin_model_field_names) - {'pk'})
-
-        result_fields = {
-            field_name: (getattr(origin_model, field_name).type.python_type, ...)
-            for field_name in defined_fields
-            if field_name in origin_model_field_names
-        }
-        result_model = create_model(
-            name,
-            **result_fields,
-            __config__=ConfigDict(from_attributes=True),
-        )
-        add_openapi_schema(name, result_model)
-        return result_model
-
-
-class UserOrm(Base):
-    __tablename__ = 'users'
-
-    pk: Mapped[int] = mapped_column(primary_key=True)
-    first_name: Mapped[str]
-    last_name: Mapped[str]
-    birth_date: Mapped[date]
-
-
 class UserGetModel(UserOrm, metaclass=SqlAlchemyToPydantic):
     fields = '__all__'
 
@@ -99,52 +46,21 @@ class UserCreateModel(UserOrm, metaclass=SqlAlchemyToPydantic):
     fields = '__without_pk__'
 
 
-#class UserListModel(BaseModel):
-#    model_config = ConfigDict(from_attributes=True)
-#    items: list[UserReadModel]
-
-
 @register_route('/users/', ('get',))
 async def get_users() -> list[UserGetModel]:
-    engine = create_async_engine(
-        'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
-        echo=True,
-    )
-
-    async with engine.begin() as conn:
-        print('now will create tables')
-        await conn.run_sync(Base.metadata.create_all)
-        print('tables has created')
-
-    async_session = async_sessionmaker(engine, expire_on_commit=False)
-    async with async_session() as session:
+    async with db.create_session() as session:
         sql_query = select(UserOrm)
         result = await session.execute(sql_query)
         users = result.scalars().all()
         user_dicts = list(map(get_dict_from_orm_object, users))
-
-    await engine.dispose()
     return json.dumps(user_dicts)
 
 
 @register_route('/users/', ('post',))
 async def create_user(new_user: UserCreateModel) -> UserCreateModel:
-    engine = create_async_engine(
-        'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
-        echo=True,
-    )
-
-    async with engine.begin() as conn:
-        print('now will create tables')
-        await conn.run_sync(Base.metadata.create_all)
-        print('tables has created')
-
-    async_session = async_sessionmaker(engine, expire_on_commit=False)
-    async with async_session() as session:
+    async with db.create_session() as session:
         async with session.begin():
             session.add(UserOrm(**dict(new_user)))
-
-    await engine.dispose()
     return new_user.model_dump_json()
 
 
