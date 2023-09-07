@@ -8,9 +8,7 @@ class HttpHeadersParser:
     def __init__(self, message: str):
         self.message: str = message
         self._detect_line_break_char()
-        self.lines_of_header: list[str] = message.split(
-            self.line_break_char
-        )
+        self.lines_of_header: list[str] = message.split(self.line_break_char)
 
     def _detect_line_break_char(self):
         self.line_break_char: str = '\r'

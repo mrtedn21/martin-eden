@@ -1,7 +1,8 @@
 import json
 from types import GenericAlias
-from pydantic import BaseModel
 from typing import Callable
+
+from pydantic import BaseModel
 
 SCHEMA_PATH_TEMPLATE = '#/components/schemas/{}'
 
@@ -25,7 +26,9 @@ def add_openapi_schema(name: str, model: BaseModel):
     openapi_object['components']['schemas'][name] = model.model_json_schema()
 
 
-def set_response_for_openapi_method(openapi_method: dict, controller: Callable):
+def set_response_for_openapi_method(
+    openapi_method: dict, controller: Callable
+):
     return_annotation = controller.__annotations__.pop('return', None)
     if not return_annotation:
         return
@@ -40,14 +43,17 @@ def set_response_for_openapi_method(openapi_method: dict, controller: Callable):
             '$ref': SCHEMA_PATH_TEMPLATE.format(inner_type.__name__)
         }
     elif issubclass(return_annotation, BaseModel):
-        response_schema['$ref'] = SCHEMA_PATH_TEMPLATE.format(return_annotation.__name__)
+        response_schema['$ref'] = SCHEMA_PATH_TEMPLATE.format(
+            return_annotation.__name__
+        )
 
 
 def set_request_for_openapi_method(openapi_method: dict, controller: Callable):
     for arg, arg_type in controller.__annotations__.items():
         if issubclass(arg_type, BaseModel):
             request_schema = dict_set(
-                openapi_method, 'requestBody.content.application/json.schema', {}
+                openapi_method, 'requestBody.content.application/json.schema',
+                {}
             )
             schema_path = SCHEMA_PATH_TEMPLATE.format(arg_type.__name__)
             request_schema['$ref'] = schema_path
@@ -60,7 +66,9 @@ def add_openapi_path(path: str, method: str, controller: Callable):
         return
 
     openapi_new_method = dict_set(
-        openapi_object, f'paths.{path}.{method}', {},
+        openapi_object,
+        f'paths.{path}.{method}',
+        {},
     )
     openapi_new_method['operationId'] = (
         path.replace('/', '') + '_' + method.lower()

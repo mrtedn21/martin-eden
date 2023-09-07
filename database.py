@@ -1,13 +1,16 @@
 from datetime import date
-from sqlalchemy.ext.asyncio import (
-    AsyncAttrs, async_sessionmaker, create_async_engine
-)
 from typing import Callable
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from pydantic import create_model, ConfigDict
-from openapi import add_openapi_schema
-from sqlalchemy.ext.asyncio import AsyncEngine
 
+from pydantic import ConfigDict, create_model
+from sqlalchemy.ext.asyncio import (
+    AsyncAttrs,
+    AsyncEngine,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+from openapi import add_openapi_schema
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -33,8 +36,8 @@ class SqlAlchemyToPydantic(type(Base)):
 
         origin_model_field_names = [
             field_name for field_name in dir(origin_model)
-            if not field_name.startswith('_')
-               and field_name not in ('registry', 'metadata', 'awaitable_attrs')
+            if not field_name.startswith('_') and field_name not in
+            ('registry', 'metadata', 'awaitable_attrs')
         ]
 
         defined_fields = fields['fields']
@@ -44,7 +47,8 @@ class SqlAlchemyToPydantic(type(Base)):
             defined_fields = tuple(set(origin_model_field_names) - {'pk'})
 
         result_fields = {
-            field_name: (getattr(origin_model, field_name).type.python_type, ...)
+            field_name:
+                (getattr(origin_model, field_name).type.python_type, ...)
             for field_name in defined_fields
             if field_name in origin_model_field_names
         }
@@ -73,4 +77,3 @@ class DataBase:
             echo=True,
         )
         self.create_session: Callable = async_sessionmaker(self.engine)
-

@@ -1,21 +1,15 @@
-from pathlib import Path
-from openapi import openapi_object, add_openapi_schema
-import json
 import asyncio
-from pydantic import ConfigDict, BaseModel
+import json
 import socket
 from asyncio import AbstractEventLoop
-from datetime import datetime, date
-from pydantic import create_model
-from database import SqlAlchemyToPydantic, UserOrm, DataBase
+from datetime import date
 
+from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import (AsyncAttrs, async_sessionmaker,
-                                    create_async_engine)
-from pydantic.json_schema import models_json_schema
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from database import DataBase, SqlAlchemyToPydantic, UserOrm
 from http_headers import HttpHeadersParser, create_response_headers
+from openapi import openapi_object
 from routing import get_controller, register_route
 
 db = DataBase()
@@ -46,7 +40,7 @@ class UserCreateModel(UserOrm, metaclass=SqlAlchemyToPydantic):
     fields = '__without_pk__'
 
 
-@register_route('/users/', ('get',))
+@register_route('/users/', ('get', ))
 async def get_users() -> list[UserGetModel]:
     async with db.create_session() as session:
         sql_query = select(UserOrm)
@@ -56,7 +50,7 @@ async def get_users() -> list[UserGetModel]:
     return json.dumps(user_dicts)
 
 
-@register_route('/users/', ('post',))
+@register_route('/users/', ('post', ))
 async def create_user(new_user: UserCreateModel) -> UserCreateModel:
     async with db.create_session() as session:
         async with session.begin():
@@ -64,13 +58,14 @@ async def create_user(new_user: UserCreateModel) -> UserCreateModel:
     return new_user.model_dump_json()
 
 
-@register_route('/schema/', ('get',))
+@register_route('/schema/', ('get', ))
 async def get_openapi_schema() -> str:
     return json.dumps(openapi_object)
 
 
 async def handle_request(
-    client_socket: socket.socket, loop: AbstractEventLoop,
+    client_socket: socket.socket,
+    loop: AbstractEventLoop,
 ):
     data = await loop.sock_recv(client_socket, 1024)
     message = data.decode()
@@ -99,13 +94,15 @@ async def handle_request(
 
     headers = create_response_headers(200, 'application/json')
     await loop.sock_sendall(
-        client_socket, (headers + response).encode('utf8'),
+        client_socket,
+        (headers + response).encode('utf8'),
     )
     client_socket.close()
 
 
 async def listen_for_connection(
-    server_socket: socket, loop: AbstractEventLoop,
+    server_socket: socket,
+    loop: AbstractEventLoop,
 ):
     while True:
         connection, address = await loop.sock_accept(server_socket)

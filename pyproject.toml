@@ -34,3 +34,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.yapf]
 based_on_style = "facebook"
 blank_line_before_nested_class_or_def = false
+column_limit = 79
