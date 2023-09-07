@@ -26,10 +26,13 @@ def add_openapi_schema(name: str, model: BaseModel):
 
 
 def set_response_for_openapi_method(openapi_method, controller):
+    return_annotation = controller.__annotations__.pop('return', None)
+    if not return_annotation:
+        return
+
     response_schema = dict_set(
         openapi_method, 'responses.200.content.application/json.schema', {}
     )
-    return_annotation = controller.__annotations__.pop('return', None)
     if type(return_annotation) == GenericAlias:
         outer_type, inner_type = parse_complex_annotation(return_annotation)
         response_schema['type'] = 'array'
@@ -41,11 +44,11 @@ def set_response_for_openapi_method(openapi_method, controller):
 
 
 def set_request_for_openapi_method(openapi_method, controller):
-    request_schema = dict_set(
-        openapi_method, 'requestBody.content.application/json.schema', {}
-    )
     for arg, arg_type in controller.__annotations__.items():
         if issubclass(arg_type, BaseModel):
+            request_schema = dict_set(
+                openapi_method, 'requestBody.content.application/json.schema', {}
+            )
             schema_path = SCHEMA_PATH_TEMPLATE.format(arg_type.__name__)
             request_schema['$ref'] = schema_path
 
