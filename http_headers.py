@@ -39,11 +39,10 @@ class HttpHeadersParser:
 
 
 def create_response_headers(status: int, content_type: str):
-    """
-    status is number, 200 or 404
+    """Status is number, 200 or 404
     content_type examples is:
     * application/json
-    * text/html
+    * text/html.
     """
     return (
         f'HTTP/1.0 {status}\n'

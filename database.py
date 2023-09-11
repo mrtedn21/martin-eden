@@ -18,19 +18,22 @@ class Base(AsyncAttrs, DeclarativeBase):
 
 
 class SqlAlchemyToPydantic(type(Base)):
-    """
-    Metaclass that get sql alchemy model fields, creates pydantic model based on them
-    And moreover, metaclass extends schemas of openapi object with models it creates
+    """Metaclass that get sql alchemy model fields, creates pydantic
+    model based on them and moreover, metaclass extends schemas of
+    openapi object with models it creates.
 
     Example:
+    -------
     class NewModel(SomeSqlAlchemyModel, metaclass=SqlAlchemyToPydantic):
         fields = '__all__'
 
     fields attribute can be on of:
-    * '__all__' - means that pydantic model will be with all fields of alchemy model
+    * '__all__' - means that pydantic model will be with all
+        fields of alchemy model
     * '__without_pk__' - means will be all fields instead of pk
     * tuple[str] - is tuple of fields that will be used
     """
+
     def __new__(cls, name, bases, fields):
         origin_model = bases[0]
 
