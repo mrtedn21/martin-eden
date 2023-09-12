@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from openapi import add_openapi_schema
 
@@ -40,7 +40,7 @@ class SqlAlchemyToPydantic(type(Base)):
         origin_model_field_names = [
             field_name for field_name in dir(origin_model)
             if not field_name.startswith('_') and field_name not in
-            ('registry', 'metadata', 'awaitable_attrs')
+            ('registry', 'metadata', 'awaitable_attrs') and not cls.is_second_relation(origin_model, field_name)
         ]
 
         defined_fields = fields['fields']
@@ -63,6 +63,20 @@ class SqlAlchemyToPydantic(type(Base)):
         add_openapi_schema(name, result_model)
         return result_model
 
+    @staticmethod
+    def is_second_relation(model, attribute_name):
+        attribute = getattr(model, attribute_name)
+
+        try:
+            collection_class = attribute.prop.collection_class
+        except AttributeError:
+            return False
+
+        if collection_class is not None:
+            return True
+        else:
+            return False
+
 
 class UserOrm(Base):
     __tablename__ = 'users'
@@ -71,6 +85,24 @@ class UserOrm(Base):
     first_name: Mapped[str]
     last_name: Mapped[str]
     birth_date: Mapped[date]
+    city: Mapped['CityOrm'] = relationship(back_populates='users')
+
+
+class CityOrm(Base):
+    __tablename__ = 'cities'
+
+    pk: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    country: Mapped['CountryOrm'] = relationship(back_populates='cities')
+    users: Mapped[list['UserOrm']] = relationship(back_populates='city')
+
+
+class CountryOrm(Base):
+    __tablename__ = 'countries'
+
+    pk: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    cities: Mapped[list['CityOrm']] = relationship(back_populates='country')
 
 
 class DataBase:
