@@ -60,5 +60,4 @@ ignore = [
   "SIM117",
 ]
 
-# Same as Black.
 line-length = 79
