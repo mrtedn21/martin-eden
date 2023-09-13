@@ -37,10 +37,16 @@ class SqlAlchemyToPydantic(type(Base)):
     def __new__(cls, name, bases, fields):
         origin_model = bases[0]
 
+        # alchemy_fields variable needs to exclude these
+        # properties from origin_model_field_names
+        alchemy_fields = ('registry', 'metadata', 'awaitable_attrs')
+        # In addition, I filter from secondary relations, because it is
+        # harmful in future pydantic model
         origin_model_field_names = [
             field_name for field_name in dir(origin_model)
-            if not field_name.startswith('_') and field_name not in
-            ('registry', 'metadata', 'awaitable_attrs') and not cls.is_second_relation(origin_model, field_name)
+            if not field_name.startswith('_')
+            and field_name not in alchemy_fields
+            and not cls.is_secondary_relation(origin_model, field_name)
         ]
 
         defined_fields = fields['fields']
@@ -64,7 +70,20 @@ class SqlAlchemyToPydantic(type(Base)):
         return result_model
 
     @staticmethod
-    def is_second_relation(model, attribute_name):
+    def is_secondary_relation(model, attribute_name):
+        """Sqlalchemy in its models force define one relation in two models.
+        What means. For example will take model order and model product.
+        Every order may have one product. In database, in sql when we create
+        table product, we don't write that it relates to order, only in table
+        order we create product_id and create foreign key, that references
+        to product table. In this case reference from order to product
+        is primary relation. Nevertheless, one product can reference to
+        multiple orders, but it is not marked in database schema,
+        therefore I say that it is secondary relation
+
+        And this function separate primary relation in model from secondary.
+        The function return True only if attribute from second arg is
+        secondary relationship."""
         attribute = getattr(model, attribute_name)
 
         try:
