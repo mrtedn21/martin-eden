@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, InstrumentedAttribute
 
 from openapi import add_openapi_schema
 
@@ -28,6 +28,7 @@ class SqlAlchemyToPydantic(type(Base)):
         fields = '__all__'
 
     fields attribute can be on of:
+
     * '__all__' - means that pydantic model will be with all
         fields of alchemy model
     * '__without_pk__' - means will be all fields instead of pk
@@ -55,12 +56,28 @@ class SqlAlchemyToPydantic(type(Base)):
         elif defined_fields == '__without_pk__':
             defined_fields = tuple(set(origin_model_field_names) - {'pk'})
 
+        # Create simple fields, of type int, str, etc.
         result_fields = {
-            field_name:
-                (getattr(origin_model, field_name).type.python_type, ...)
+            field_name: (
+                getattr(origin_model, field_name).type.python_type, ...
+            )
             for field_name in defined_fields
-            if field_name in origin_model_field_names
+            if field_name in origin_model_field_names and
+            # if alchemy field has 'type' property,
+            # it means the field is simple, int, str, etc.
+            hasattr(getattr(origin_model, field_name), 'type')
         }
+
+        # Create complex fields, of pydantic models,
+        # for creating nested pydantic models
+        result_fields.update({
+            field_name: (fields[field_name], ...)
+            for field_name in defined_fields
+            if field_name in origin_model_field_names and
+            # if alchemy field hasn't 'type' property, it means the field is relation
+            not hasattr(getattr(origin_model, field_name), 'type')
+        })
+
         result_model = create_model(
             name,
             **result_fields,
@@ -82,8 +99,8 @@ class SqlAlchemyToPydantic(type(Base)):
         therefore I say that it is secondary relation
 
         And this function separate primary relation in model from secondary.
-        The function return True only if attribute from second arg is
-        secondary relationship."""
+        The function return True only if attribute from attribute_name
+        argument is secondary relationship."""
         attribute = getattr(model, attribute_name)
 
         try:

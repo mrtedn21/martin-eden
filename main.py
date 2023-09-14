@@ -32,22 +32,22 @@ def get_dict_from_orm_object(some_object):
     return result_data
 
 
-#class CountryGetModel(CountryOrm, metaclass=SqlAlchemyToPydantic):
-#    fields = '__all__'
-#
-#
-#class CountryCreateModel(CountryOrm, metaclass=SqlAlchemyToPydantic):
-#    fields = '__without_pk__'
+class CountryGetModel(CountryOrm, metaclass=SqlAlchemyToPydantic):
+    fields = '__all__'
+
+
+class CountryCreateModel(CountryOrm, metaclass=SqlAlchemyToPydantic):
+    fields = '__without_pk__'
 
 
 class CityGetModel(CityOrm, metaclass=SqlAlchemyToPydantic):
     fields = '__all__'
-    #country = CountryGetModel
+    country = CountryGetModel
 
 
 class CityCreateModel(CityOrm, metaclass=SqlAlchemyToPydantic):
     fields = '__without_pk__'
-    #country = CountryCreateModel
+    country = CountryCreateModel
 
 
 class UserGetModel(UserOrm, metaclass=SqlAlchemyToPydantic):
