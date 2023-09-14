@@ -48,7 +48,8 @@ class SqlAlchemyToPydantic(type(Base)):
             field_name for field_name in dir(origin_model)
             if not field_name.startswith('_')
             and field_name not in alchemy_fields
-            and not cls.is_secondary_relation(origin_model, field_name)
+            and not cls.is_property_secondary_relation(origin_model, field_name)
+            and not cls.is_property_foreign_key(origin_model, field_name)
         ]
 
         defined_fields = fields['fields']
@@ -74,9 +75,10 @@ class SqlAlchemyToPydantic(type(Base)):
         result_fields.update({
             field_name: (fields[field_name], ...)
             for field_name in defined_fields
-            if field_name in origin_model_field_names and
+            if field_name in origin_model_field_names
+            and fields.get(field_name)
             # if alchemy field hasn't 'type' property, it means the field is relation
-            not hasattr(getattr(origin_model, field_name), 'type')
+            and not hasattr(getattr(origin_model, field_name), 'type')
         })
 
         result_model = create_model(
@@ -88,7 +90,7 @@ class SqlAlchemyToPydantic(type(Base)):
         return result_model
 
     @staticmethod
-    def is_secondary_relation(model, attribute_name):
+    def is_property_secondary_relation(model, attribute_name):
         """Sqlalchemy in its models force define one relation in two models.
         What means. For example will take model order and model product.
         Every order may have one product. In database, in sql when we create
@@ -110,6 +112,19 @@ class SqlAlchemyToPydantic(type(Base)):
             return False
 
         if collection_class is not None:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def is_property_foreign_key(model, attribute_name):
+        attribute = getattr(model, attribute_name)
+        try:
+            foreign_keys = attribute.foreign_keys
+        except AttributeError:
+            return False
+
+        if foreign_keys:
             return True
         else:
             return False

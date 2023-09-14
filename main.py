@@ -63,11 +63,18 @@ class UserCreateModel(UserOrm, metaclass=SqlAlchemyToPydantic):
 @register_route('/users/', ('get', ))
 async def get_users() -> list[UserGetModel]:
     async with db.create_session() as session:
-        sql_query = select(UserOrm)
+        sql_query = select(
+            UserOrm, CityOrm, CountryOrm
+        ).select_from(UserOrm).join(CityOrm).join(CountryOrm)
         result = await session.execute(sql_query)
-        users = result.scalars().all()
-        user_dicts = list(map(get_dict_from_orm_object, users))
-    return json.dumps(user_dicts)
+
+        users = []
+        for user in result.fetchall():
+            user_pydantic = UserGetModel.model_validate(user[0])
+            user_dict = user_pydantic.model_dump()
+            user_dict['birth_date'] = str(user_dict['birth_date'])
+            users.append(user_dict)
+    return json.dumps(users)
 
 
 @register_route('/users/', ('post', ))
