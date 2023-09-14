@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, InstrumentedAttribute
+from sqlalchemy import ForeignKey
 
 from openapi import add_openapi_schema
 
@@ -121,6 +122,7 @@ class UserOrm(Base):
     first_name: Mapped[str]
     last_name: Mapped[str]
     birth_date: Mapped[date]
+    city_id: Mapped[int] = mapped_column(ForeignKey('cities.pk'))
     city: Mapped['CityOrm'] = relationship(back_populates='users')
 
 
@@ -129,6 +131,7 @@ class CityOrm(Base):
 
     pk: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
+    country_id: Mapped[int] = mapped_column(ForeignKey('countries.pk'))
     country: Mapped['CountryOrm'] = relationship(back_populates='cities')
     users: Mapped[list['UserOrm']] = relationship(back_populates='city')
 
