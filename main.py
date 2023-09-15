@@ -66,15 +66,12 @@ async def get_users() -> list[UserGetModel]:
         sql_query = select(
             UserOrm, CityOrm, CountryOrm
         ).select_from(UserOrm).join(CityOrm).join(CountryOrm)
-        result = await session.execute(sql_query)
 
-        users = []
-        for user in result.fetchall():
-            user_pydantic = UserGetModel.model_validate(user[0])
-            user_dict = user_pydantic.model_dump()
-            user_dict['birth_date'] = str(user_dict['birth_date'])
-            users.append(user_dict)
-    return json.dumps(users)
+        result = await session.execute(sql_query)
+        return [
+            UserGetModel.model_validate(user[0])
+            for user in result.fetchall()
+        ]
 
 
 @register_route('/users/', ('post', ))
@@ -82,7 +79,7 @@ async def create_user(new_user: UserCreateModel) -> UserCreateModel:
     async with db.create_session() as session:
         async with session.begin():
             session.add(UserOrm(**dict(new_user)))
-    return new_user.model_dump_json()
+    return new_user
 
 
 @register_route('/schema/', ('get', ))
@@ -113,11 +110,13 @@ async def handle_request(
             if issubclass(arg_type, BaseModel):
                 body = parser.get_body()
                 pydantic_object = arg_type.model_validate_json(body)
-                response: str = await controller(**{arg_name: pydantic_object})
+                response = await controller(**{arg_name: pydantic_object})
                 break
-
     else:
         response: str = await controller()
+        if isinstance(response, list):
+            python_dicts = [obj.model_dump() for obj in response]
+            response = json.dumps(python_dicts, default=str)
 
     headers = create_response_headers(200, 'application/json')
     await loop.sock_sendall(

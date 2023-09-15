@@ -26,7 +26,6 @@ def dict_set(dct: dict, path: str, value):
 
 
 def register_pydantic_model(name: str, model: BaseModel):
-    #openapi_object['components']['schemas'][name] = model.model_json_schema()
     defined_pydantic_models[name] = model
 
 
