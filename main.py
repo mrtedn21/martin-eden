@@ -7,7 +7,13 @@ from datetime import date
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from database import DataBase, SqlAlchemyToPydantic, UserOrm, CountryOrm, CityOrm
+from database import (
+    CityOrm,
+    CountryOrm,
+    DataBase,
+    SqlAlchemyToPydantic,
+    UserOrm,
+)
 from http_headers import HttpHeadersParser, create_response_headers
 from openapi import openapi_object, write_pydantic_models_to_openapi
 from routing import get_controller, register_route

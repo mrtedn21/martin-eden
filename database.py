@@ -2,14 +2,20 @@ from datetime import date
 from typing import Callable
 
 from pydantic import ConfigDict, create_model
+from sqlalchemy import ForeignKey
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
     AsyncEngine,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, InstrumentedAttribute
-from sqlalchemy import ForeignKey
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    InstrumentedAttribute,
+    Mapped,
+    mapped_column,
+    relationship,
+)
 
 from openapi import register_pydantic_model
 
