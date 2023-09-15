@@ -3,11 +3,14 @@ from types import GenericAlias
 from typing import Callable
 
 from pydantic import BaseModel
+from pydantic.json_schema import models_json_schema, update_json_schema
 
 SCHEMA_PATH_TEMPLATE = '#/components/schemas/{}'
 
 with open('example.json') as file:
     openapi_object = json.load(file)
+
+defined_pydantic_models = {}
 
 
 def dict_set(dct: dict, path: str, value):
@@ -22,8 +25,17 @@ def dict_set(dct: dict, path: str, value):
     return dct[last_key]
 
 
-def add_openapi_schema(name: str, model: BaseModel):
-    openapi_object['components']['schemas'][name] = model.model_json_schema()
+def register_pydantic_model(name: str, model: BaseModel):
+    #openapi_object['components']['schemas'][name] = model.model_json_schema()
+    defined_pydantic_models[name] = model
+
+
+def write_pydantic_models_to_openapi():
+    _, defs = models_json_schema(
+        [(model, 'validation') for model in defined_pydantic_models.values()],
+        ref_template='#/components/schemas/{model}',
+    )
+    openapi_object['components']['schemas'] = defs['$defs']
 
 
 def set_response_for_openapi_method(

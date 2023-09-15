@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from database import DataBase, SqlAlchemyToPydantic, UserOrm, CountryOrm, CityOrm
 from http_headers import HttpHeadersParser, create_response_headers
-from openapi import openapi_object
+from openapi import openapi_object, write_pydantic_models_to_openapi
 from routing import get_controller, register_route
 
 db = DataBase()
@@ -146,6 +146,7 @@ async def main():
     server_socket.bind(server_address)
     server_socket.listen()
 
+    write_pydantic_models_to_openapi()
     await listen_for_connection(server_socket, asyncio.get_event_loop())
 
 

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, InstrumentedAttribute
 from sqlalchemy import ForeignKey
 
-from openapi import add_openapi_schema
+from openapi import register_pydantic_model
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -86,7 +86,7 @@ class SqlAlchemyToPydantic(type(Base)):
             **result_fields,
             __config__=ConfigDict(from_attributes=True),
         )
-        add_openapi_schema(name, result_model)
+        register_pydantic_model(name, result_model)
         return result_model
 
     @staticmethod
