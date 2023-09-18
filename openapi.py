@@ -81,8 +81,10 @@ def add_openapi_path(path: str, method: str, controller: Callable):
         f'paths.{path}.{method}',
         {},
     )
+    # IMPORTANT. In this brackets can't be comma, with comma
+    # operationId will be tuple, but must be string
     openapi_new_method['operationId'] = (
-        path.replace('/', '') + '_' + method.lower(),
+        path.replace('/', '') + '_' + method.lower()
     )
 
     set_response_for_openapi_method(openapi_new_method, controller)

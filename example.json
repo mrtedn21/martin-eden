@@ -12,10 +12,10 @@
             "name": "MIT"
         }
     },
-    "host": "petstore.swagger.io",
-    "basePath": "/api",
-    "schemes": [
-        "http"
+    "servers": [
+        {
+            "url": "http://localhost:8001"
+        }
     ],
     "consumes": [
         "application/json"
