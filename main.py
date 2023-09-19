@@ -82,9 +82,9 @@ async def get_users() -> list[UserGetModel]:
 
 @register_route('/users/', ('post', ))
 async def create_user(new_user: UserCreateModel) -> UserCreateModel:
-    async with db.create_session() as session:
-        async with session.begin():
-            session.add(UserOrm(**dict(new_user)))
+    #async with db.create_session() as session:
+    #    async with session.begin():
+    #        session.add(UserOrm(**dict(new_user)))
     return new_user
 
 
@@ -104,6 +104,15 @@ async def handle_request(
     path = parser.get_path()
     method = parser.get_method_name()
 
+    if method == 'OPTIONS':
+        headers = create_response_headers(200, 'application/json')
+        await loop.sock_sendall(
+            client_socket,
+            (headers + 'HTTP/1.1 204 No Content\nAllow: OPTIONS, GET, POST').encode('utf8'),
+        )
+        client_socket.close()
+        return
+
     try:
         controller = get_controller(path, method)
     except KeyError:
@@ -117,6 +126,8 @@ async def handle_request(
                 body = parser.get_body()
                 pydantic_object = arg_type.model_validate_json(body)
                 response = await controller(**{arg_name: pydantic_object})
+                if isinstance(response, BaseModel):
+                    response = response.model_dump_json()
                 break
     else:
         response: str = await controller()

@@ -38,14 +38,23 @@ class HttpHeadersParser:
         return self.message[position_of_body_starts:]
 
 
-def create_response_headers(status: int, content_type: str):
+def create_response_headers(
+    status: int, content_type: str, for_options: bool = False,
+):
     """Status is number, 200 or 404
     content_type examples is:
     * application/json
     * text/html.
     """
+    allow_methods = 'Allow: OPTIONS, GET, POST\n'
+
     return (
         f'HTTP/1.0 {status}\n'
         f'Access-Control-Allow-Origin: *\n'
+        'Access-Control-Allow-Methods: POST, GET, OPTIONS\n'
+        'Access-Control-Allow-Headers: origin, content-type, accept\n'
+        'Access-Control-Allow-Credentials: true\n'
+        'Access-Control-Max-Age: 86400\n'
+        f'{allow_methods if for_options else ""}'
         f'Content-Type: {content_type};charset=UTF-8\n\n'
     )
