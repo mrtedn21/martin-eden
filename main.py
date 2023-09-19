@@ -13,6 +13,8 @@ from database import (
     DataBase,
     SqlAlchemyToPydantic,
     UserOrm,
+    GenderOrm,
+    LanguageOrm,
 )
 from http_headers import HttpHeadersParser, create_response_headers
 from openapi import openapi_object, write_pydantic_models_to_openapi
@@ -56,27 +58,52 @@ class CityCreateModel(CityOrm, metaclass=SqlAlchemyToPydantic):
     country = CountryCreateModel
 
 
+class LanguageGetModel(LanguageOrm, metaclass=SqlAlchemyToPydantic):
+    fields = '__all__'
+
+
+class LanguageCreateModel(LanguageOrm, metaclass=SqlAlchemyToPydantic):
+    fields = '__without_pk__'
+
+
+class GenderGetModel(GenderOrm, metaclass=SqlAlchemyToPydantic):
+    fields = '__all__'
+
+
+class GenderCreateModel(GenderOrm, metaclass=SqlAlchemyToPydantic):
+    fields = '__without_pk__'
+
+
 class UserGetModel(UserOrm, metaclass=SqlAlchemyToPydantic):
     fields = '__all__'
     city = CityGetModel
+    language = LanguageGetModel
+    gender = GenderGetModel
 
 
 class UserCreateModel(UserOrm, metaclass=SqlAlchemyToPydantic):
     fields = '__without_pk__'
     city = CityCreateModel
+    language = LanguageCreateModel
+    gender = GenderCreateModel
 
 
 @register_route('/users/', ('get', ))
 async def get_users() -> list[UserGetModel]:
     async with db.create_session() as session:
-        sql_query = select(
-            UserOrm, CityOrm, CountryOrm
-        ).select_from(UserOrm).join(CityOrm).join(CountryOrm)
+        sql_query = (
+            select(
+                UserOrm, CityOrm, CountryOrm, LanguageOrm, GenderOrm
+            ).select_from(UserOrm)
+            .outerjoin(CityOrm).outerjoin(CountryOrm)
+            .outerjoin(LanguageOrm).outerjoin(GenderOrm)
+        )
 
         result = await session.execute(sql_query)
+        users = result.fetchall()
         return [
             UserGetModel.model_validate(user[0])
-            for user in result.fetchall()
+            for user in users
         ]
 
 
@@ -86,11 +113,15 @@ async def create_user(new_user: UserCreateModel) -> UserCreateModel:
         async with session.begin():
             country = CountryOrm(name=new_user.city.country.name)
             city = CityOrm(country=country, name=new_user.city.name)
+            language = LanguageOrm(name=new_user.language.name)
+            gender = GenderOrm(name=new_user.gender.name)
             session.add(UserOrm(
                 first_name=new_user.first_name,
                 last_name=new_user.last_name,
                 birth_date=new_user.birth_date,
                 city=city,
+                language=language,
+                gender=gender,
             ))
     return new_user
 
