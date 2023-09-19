@@ -82,9 +82,16 @@ async def get_users() -> list[UserGetModel]:
 
 @register_route('/users/', ('post', ))
 async def create_user(new_user: UserCreateModel) -> UserCreateModel:
-    #async with db.create_session() as session:
-    #    async with session.begin():
-    #        session.add(UserOrm(**dict(new_user)))
+    async with db.create_session() as session:
+        async with session.begin():
+            country = CountryOrm(name=new_user.city.country.name)
+            city = CityOrm(country=country, name=new_user.city.name)
+            session.add(UserOrm(
+                first_name=new_user.first_name,
+                last_name=new_user.last_name,
+                birth_date=new_user.birth_date,
+                city=city,
+            ))
     return new_user
 
 
