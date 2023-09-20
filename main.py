@@ -1,8 +1,11 @@
 import asyncio
+from operator import itemgetter
+from sqlalchemy.exc import MissingGreenlet
 import json
 import socket
 from asyncio import AbstractEventLoop
 from datetime import date
+from database import Base
 
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -102,9 +105,28 @@ async def get_users() -> list[UserGetModel]:
         result = await session.execute(sql_query)
         users = result.fetchall()
         return [
-            UserGetModel.model_validate(user[0])
-            for user in users
+            UserGetModel.model_validate(user)
+            for user in map(lambda obj: make_dict_from_orm_object(obj[0]), users)
         ]
+
+
+def make_dict_from_orm_object(origin):
+    new_obj = {}
+    for attribute_name in dir(origin):
+        if attribute_name.startswith('_'):
+            continue
+
+        try:
+            attribute_value = getattr(origin, attribute_name, None)
+        except MissingGreenlet:
+            pass
+
+        if isinstance(attribute_value, Base):
+            new_obj[attribute_name] = make_dict_from_orm_object(attribute_value)
+        if type(attribute_value) in {int, str, date}:
+            new_obj[attribute_name] = attribute_value
+    return new_obj
+
 
 
 @register_route('/users/', ('post', ))

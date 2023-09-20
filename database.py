@@ -79,7 +79,7 @@ class SqlAlchemyToPydantic(type(Base)):
         # Create complex fields, of pydantic models,
         # for creating nested pydantic models
         result_fields.update({
-            field_name: (fields[field_name], ...)
+            field_name: (fields[field_name], None)
             for field_name in defined_fields
             if field_name in origin_model_field_names
             and fields.get(field_name)
