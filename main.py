@@ -111,6 +111,10 @@ async def get_users() -> list[UserGetModel]:
 
 
 def make_dict_from_orm_object(origin):
+    """pydantic method - model_validate if sees attribute of orm object,
+    that equal to None, then model_validate crashes. And for this, i
+    write the function, make_dict_from_orm_object if sees that attribute is None,
+    then resulting object won't have the attribute"""
     new_obj = {}
     for attribute_name in dir(origin):
         if attribute_name.startswith('_'):
