@@ -132,7 +132,6 @@ def make_dict_from_orm_object(origin):
     return new_obj
 
 
-
 @register_route('/users/', ('post', ))
 async def create_user(new_user: UserCreateModel) -> UserCreateModel:
     async with db.create_session() as session:

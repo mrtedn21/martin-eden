@@ -67,7 +67,7 @@ class SqlAlchemyToPydantic(type(Base)):
         # Create simple fields, of type int, str, etc.
         result_fields = {
             field_name: (
-                getattr(origin_model, field_name).type.python_type, ...
+                getattr(origin_model, field_name).type.python_type, ...,
             )
             for field_name in defined_fields
             if field_name in origin_model_field_names and
@@ -78,14 +78,14 @@ class SqlAlchemyToPydantic(type(Base)):
 
         # Create complex fields, of pydantic models,
         # for creating nested pydantic models
-        result_fields.update({
-            field_name: (fields[field_name], None)
-            for field_name in defined_fields
-            if field_name in origin_model_field_names
-            and fields.get(field_name)
-            # if alchemy field hasn't 'type' property, it means the field is relation
-            and not hasattr(getattr(origin_model, field_name), 'type')
-        })
+        for field_name in defined_fields:
+            if (field_name in origin_model_field_names
+                and fields.get(field_name)
+                and not hasattr(getattr(origin_model, field_name), 'type')
+            ):
+                result_fields[field_name] = (fields[field_name], (
+                    None if getattr(origin_model, field_name).expression.right.nullable else ...
+                ))
 
         result_model = create_model(
             name,
