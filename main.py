@@ -104,10 +104,12 @@ async def get_users() -> list[UserGetModel]:
 
         result = await session.execute(sql_query)
         users = result.fetchall()
-        return [
-            UserGetModel.model_validate(user)
-            for user in map(lambda obj: make_dict_from_orm_object(obj[0]), users)
-        ]
+        schema = UserGetModel(many=True)
+        return schema.dump(map(itemgetter(0), users))
+        #return [
+        #    UserGetModel.model_validate(user)
+        #    for user in map(lambda obj: make_dict_from_orm_object(obj[0]), users)
+        #]
 
 
 def make_dict_from_orm_object(origin):
@@ -195,8 +197,9 @@ async def handle_request(
     else:
         response: str = await controller()
         if isinstance(response, list):
-            python_dicts = [obj.model_dump() for obj in response]
-            response = json.dumps(python_dicts, default=str)
+            #python_dicts = [obj.model_dump() for obj in response]
+            #response = json.dumps(python_dicts, default=str)
+            response = json.dumps(response)
 
     headers = create_response_headers(200, 'application/json')
     await loop.sock_sendall(

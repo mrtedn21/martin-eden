@@ -1,9 +1,11 @@
 import json
 from types import GenericAlias
 from typing import Callable
+from marshmallow_jsonschema import JSONSchema
 
 from pydantic import BaseModel
 from pydantic.json_schema import models_json_schema, update_json_schema
+from marshmallow import Schema
 
 SCHEMA_PATH_TEMPLATE = '#/components/schemas/{}'
 
@@ -29,12 +31,28 @@ def register_pydantic_model(name: str, model: BaseModel):
     defined_pydantic_models[name] = model
 
 
+def change_openapi_schema_root(dct):
+    for key, value in dct.items():
+        if key == '$ref':
+            dct[key] = value.replace('definitions', 'components/schemas')
+        if isinstance(value, dict):
+            change_openapi_schema_root(value)
+
+
 def write_pydantic_models_to_openapi():
-    _, defs = models_json_schema(
-        [(model, 'validation') for model in defined_pydantic_models.values()],
-        ref_template='#/components/schemas/{model}',
-    )
-    openapi_object['components']['schemas'] = defs['$defs']
+    json_schema = JSONSchema()
+    resulting_schema = {}
+    for schema in defined_pydantic_models.values():
+        resulting_schema.update(json_schema.dump(schema()))
+    #JSONSchema().dump(defined_pydantic_models['UserGetModel']())
+
+    definitions = resulting_schema['definitions']
+    change_openapi_schema_root(definitions)
+    #_, defs = models_json_schema(
+    #    [(model, 'validation') for model in defined_pydantic_models.values()],
+    #    ref_template='#/components/schemas/{model}',
+    #)
+    openapi_object['components']['schemas'] = definitions
 
 
 def set_response_for_openapi_method(
@@ -61,7 +79,7 @@ def set_response_for_openapi_method(
 
 def set_request_for_openapi_method(openapi_method: dict, controller: Callable):
     for arg_type in controller.__annotations__.values():
-        if issubclass(arg_type, BaseModel):
+        if issubclass(arg_type, Schema):
             request_schema = dict_set(
                 openapi_method, 'requestBody.content.application/json.schema',
                 {},
@@ -100,5 +118,5 @@ def parse_complex_annotation(annotation: GenericAlias) -> tuple[type, type]:
     if isinstance(annotation(), list):
         # There are inner types in annotation.__args__
         inner_type = annotation.__args__[0]
-        if issubclass(inner_type, BaseModel):
+        if issubclass(inner_type, Schema):
             return list, inner_type

@@ -1,6 +1,9 @@
 from datetime import date
 from typing import Callable
 
+from marshmallow.fields import Str, DateTime, Date, Int, Nested
+from marshmallow import Schema
+
 from pydantic import ConfigDict, create_model
 from sqlalchemy import ForeignKey
 from sqlalchemy.ext.asyncio import (
@@ -11,7 +14,6 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
-    InstrumentedAttribute,
     Mapped,
     mapped_column,
     relationship,
@@ -22,6 +24,12 @@ from openapi import register_pydantic_model
 
 class Base(AsyncAttrs, DeclarativeBase):
     pass
+
+types_map = {
+    str: Str,
+    int: Int,
+    date: Date,
+}
 
 
 class SqlAlchemyToPydantic(type(Base)):
@@ -66,9 +74,7 @@ class SqlAlchemyToPydantic(type(Base)):
 
         # Create simple fields, of type int, str, etc.
         result_fields = {
-            field_name: (
-                getattr(origin_model, field_name).type.python_type, ...,
-            )
+            field_name: types_map[getattr(origin_model, field_name).type.python_type](required=True)
             for field_name in defined_fields
             if field_name in origin_model_field_names and
             # if alchemy field has 'type' property,
@@ -83,15 +89,9 @@ class SqlAlchemyToPydantic(type(Base)):
                 and fields.get(field_name)
                 and not hasattr(getattr(origin_model, field_name), 'type')
             ):
-                result_fields[field_name] = (fields[field_name], (
-                    None if getattr(origin_model, field_name).expression.right.nullable else ...
-                ))
+                result_fields[field_name] = Nested(fields[field_name])
 
-        result_model = create_model(
-            name,
-            **result_fields,
-            __config__=ConfigDict(from_attributes=True),
-        )
+        result_model = Schema.from_dict(result_fields, name=name)
         register_pydantic_model(name, result_model)
         return result_model
 
