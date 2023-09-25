@@ -74,7 +74,7 @@ def set_response_for_openapi_method(
         response_schema['items'] = {
             '$ref': SCHEMA_PATH_TEMPLATE.format(inner_type.__name__),
         }
-    elif issubclass(return_annotation, BaseModel):
+    elif issubclass(return_annotation, Schema):
         response_schema['$ref'] = SCHEMA_PATH_TEMPLATE.format(
             return_annotation.__name__,
         )
