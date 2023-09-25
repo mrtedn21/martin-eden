@@ -91,6 +91,46 @@ class UserCreateModel(UserOrm, metaclass=SqlAlchemyToMarshmallow):
     gender = GenderCreateModel
 
 
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class Country:
+    pk: Optional[int] = None
+    name: Optional[str] = None
+
+
+@dataclass
+class Language:
+    pk: Optional[int] = None
+    name: Optional[str] = None
+
+
+@dataclass
+class Gender:
+    pk: Optional[int] = None
+    name: Optional[str] = None
+
+
+@dataclass
+class City:
+    pk: Optional[int] = None
+    name: Optional[str] = None
+    country: Country = None
+
+
+@dataclass
+class User:
+    pk: Optional[int] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    birth_date: Optional[date] = None
+    city: Optional[City] = None
+    language: Optional[Language] = None
+    gender: Optional[Gender] = None
+
+
 @register_route('/users/', ('get', ))
 async def get_users() -> list[UserGetModel]:
     async with db.create_session() as session:
@@ -106,6 +146,15 @@ async def get_users() -> list[UserGetModel]:
         users = result.fetchall()
         schema = UserGetModel(many=True)
         return schema.dump(map(itemgetter(0), users))
+
+
+def dataclass_from_dict(klass, d):
+    try:
+        import dataclasses
+        fieldtypes = {f.name:f.type for f in dataclasses.fields(klass)}
+        return klass(**{f:dataclass_from_dict(fieldtypes[f],d[f]) for f in d})
+    except:
+        return d # Not a dataclass field
 
 
 @register_route('/users/', ('post', ))
