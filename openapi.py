@@ -3,8 +3,6 @@ from types import GenericAlias
 from typing import Callable
 from marshmallow_jsonschema import JSONSchema
 
-from pydantic import BaseModel
-from pydantic.json_schema import models_json_schema, update_json_schema
 from marshmallow import Schema
 
 SCHEMA_PATH_TEMPLATE = '#/components/schemas/{}'
@@ -12,7 +10,7 @@ SCHEMA_PATH_TEMPLATE = '#/components/schemas/{}'
 with open('example.json') as file:
     openapi_object = json.load(file)
 
-defined_pydantic_models = {}
+defined_marshmallow_schemas = {}
 
 
 def dict_set(dct: dict, path: str, value):
@@ -27,8 +25,8 @@ def dict_set(dct: dict, path: str, value):
     return dct[last_key]
 
 
-def register_pydantic_model(name: str, model: BaseModel):
-    defined_pydantic_models[name] = model
+def register_marshmallow_schema(name: str, schema: Schema):
+    defined_marshmallow_schemas[name] = schema
 
 
 def change_openapi_schema_root(dct):
@@ -42,19 +40,14 @@ def change_openapi_schema_root(dct):
 def write_pydantic_models_to_openapi():
     json_schema = JSONSchema()
     resulting_schema = {}
-    for schema in defined_pydantic_models.values():
+    for schema in defined_marshmallow_schemas.values():
         resulting_schema.update(json_schema.dump(schema()))
-    #JSONSchema().dump(defined_pydantic_models['UserGetModel']())
 
     definitions = resulting_schema['definitions']
     change_openapi_schema_root(definitions)
 
     for schema in definitions.values():
         schema.pop('additionalProperties', None)
-    #_, defs = models_json_schema(
-    #    [(model, 'validation') for model in defined_pydantic_models.values()],
-    #    ref_template='#/components/schemas/{model}',
-    #)
     openapi_object['components']['schemas'] = definitions
 
 

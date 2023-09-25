@@ -4,7 +4,6 @@ from typing import Callable
 from marshmallow.fields import Str, DateTime, Date, Int, Nested
 from marshmallow import Schema
 
-from pydantic import ConfigDict, create_model
 from sqlalchemy import ForeignKey
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
@@ -19,7 +18,7 @@ from sqlalchemy.orm import (
     relationship,
 )
 
-from openapi import register_pydantic_model
+from openapi import register_marshmallow_schema
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -32,9 +31,9 @@ types_map = {
 }
 
 
-class SqlAlchemyToPydantic(type(Base)):
-    """Metaclass that get sql alchemy model fields, creates pydantic
-    model based on them and moreover, metaclass extends schemas of
+class SqlAlchemyToMarshmallow(type(Base)):
+    """Metaclass that get sql alchemy model fields, creates marshmallow
+    schemas based on them and moreover, metaclass extends schemas of
     openapi object with models it creates.
 
     Example:
@@ -44,7 +43,7 @@ class SqlAlchemyToPydantic(type(Base)):
 
     fields attribute can be on of:
 
-    * '__all__' - means that pydantic model will be with all
+    * '__all__' - means that marshmallow schema will be with all
         fields of alchemy model
     * '__without_pk__' - means will be all fields instead of pk
     * tuple[str] - is tuple of fields that will be used
@@ -57,7 +56,7 @@ class SqlAlchemyToPydantic(type(Base)):
         # properties from origin_model_field_names
         alchemy_fields = ('registry', 'metadata', 'awaitable_attrs')
         # In addition, I filter from secondary relations, because it is
-        # harmful in future pydantic model
+        # harmful in future marshmallow schemas
         origin_model_field_names = [
             field_name for field_name in dir(origin_model)
             if not field_name.startswith('_')
@@ -82,8 +81,8 @@ class SqlAlchemyToPydantic(type(Base)):
             hasattr(getattr(origin_model, field_name), 'type')
         }
 
-        # Create complex fields, of pydantic models,
-        # for creating nested pydantic models
+        # Create complex fields, of marshmallow schemas,
+        # for creating nested marshmallow schemas
         for field_name in defined_fields:
             if (field_name in origin_model_field_names
                 and fields.get(field_name)
@@ -92,7 +91,7 @@ class SqlAlchemyToPydantic(type(Base)):
                 result_fields[field_name] = Nested(fields[field_name])
 
         result_model = Schema.from_dict(result_fields, name=name)
-        register_pydantic_model(name, result_model)
+        register_marshmallow_schema(name, result_model)
         return result_model
 
     @staticmethod

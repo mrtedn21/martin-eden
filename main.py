@@ -1,4 +1,5 @@
 import asyncio
+from marshmallow import Schema
 from operator import itemgetter
 from sqlalchemy.exc import MissingGreenlet
 import json
@@ -7,14 +8,13 @@ from asyncio import AbstractEventLoop
 from datetime import date
 from database import Base
 
-from pydantic import BaseModel
 from sqlalchemy import select
 
 from database import (
     CityOrm,
     CountryOrm,
     DataBase,
-    SqlAlchemyToPydantic,
+    SqlAlchemyToMarshmallow,
     UserOrm,
     GenderOrm,
     LanguageOrm,
@@ -43,48 +43,48 @@ def get_dict_from_orm_object(some_object):
     return result_data
 
 
-class CountryGetModel(CountryOrm, metaclass=SqlAlchemyToPydantic):
+class CountryGetModel(CountryOrm, metaclass=SqlAlchemyToMarshmallow):
     fields = '__all__'
 
 
-class CountryCreateModel(CountryOrm, metaclass=SqlAlchemyToPydantic):
+class CountryCreateModel(CountryOrm, metaclass=SqlAlchemyToMarshmallow):
     fields = '__without_pk__'
 
 
-class CityGetModel(CityOrm, metaclass=SqlAlchemyToPydantic):
+class CityGetModel(CityOrm, metaclass=SqlAlchemyToMarshmallow):
     fields = '__all__'
     country = CountryGetModel
 
 
-class CityCreateModel(CityOrm, metaclass=SqlAlchemyToPydantic):
+class CityCreateModel(CityOrm, metaclass=SqlAlchemyToMarshmallow):
     fields = '__without_pk__'
     country = CountryCreateModel
 
 
-class LanguageGetModel(LanguageOrm, metaclass=SqlAlchemyToPydantic):
+class LanguageGetModel(LanguageOrm, metaclass=SqlAlchemyToMarshmallow):
     fields = '__all__'
 
 
-class LanguageCreateModel(LanguageOrm, metaclass=SqlAlchemyToPydantic):
+class LanguageCreateModel(LanguageOrm, metaclass=SqlAlchemyToMarshmallow):
     fields = '__without_pk__'
 
 
-class GenderGetModel(GenderOrm, metaclass=SqlAlchemyToPydantic):
+class GenderGetModel(GenderOrm, metaclass=SqlAlchemyToMarshmallow):
     fields = '__all__'
 
 
-class GenderCreateModel(GenderOrm, metaclass=SqlAlchemyToPydantic):
+class GenderCreateModel(GenderOrm, metaclass=SqlAlchemyToMarshmallow):
     fields = '__without_pk__'
 
 
-class UserGetModel(UserOrm, metaclass=SqlAlchemyToPydantic):
+class UserGetModel(UserOrm, metaclass=SqlAlchemyToMarshmallow):
     fields = '__all__'
     city = CityGetModel
     language = LanguageGetModel
     gender = GenderGetModel
 
 
-class UserCreateModel(UserOrm, metaclass=SqlAlchemyToPydantic):
+class UserCreateModel(UserOrm, metaclass=SqlAlchemyToMarshmallow):
     fields = '__without_pk__'
     city = CityCreateModel
     language = LanguageCreateModel
@@ -106,46 +106,20 @@ async def get_users() -> list[UserGetModel]:
         users = result.fetchall()
         schema = UserGetModel(many=True)
         return schema.dump(map(itemgetter(0), users))
-        #return [
-        #    UserGetModel.model_validate(user)
-        #    for user in map(lambda obj: make_dict_from_orm_object(obj[0]), users)
-        #]
-
-
-def make_dict_from_orm_object(origin):
-    """pydantic method - model_validate if sees attribute of orm object,
-    that equal to None, then model_validate crashes. And for this, i
-    write the function, make_dict_from_orm_object if sees that attribute is None,
-    then resulting object won't have the attribute"""
-    new_obj = {}
-    for attribute_name in dir(origin):
-        if attribute_name.startswith('_'):
-            continue
-
-        try:
-            attribute_value = getattr(origin, attribute_name, None)
-        except MissingGreenlet:
-            pass
-
-        if isinstance(attribute_value, Base):
-            new_obj[attribute_name] = make_dict_from_orm_object(attribute_value)
-        if type(attribute_value) in {int, str, date}:
-            new_obj[attribute_name] = attribute_value
-    return new_obj
 
 
 @register_route('/users/', ('post', ))
 async def create_user(new_user: UserCreateModel) -> UserCreateModel:
     async with db.create_session() as session:
         async with session.begin():
-            country = CountryOrm(name=new_user.city.country.name)
-            city = CityOrm(country=country, name=new_user.city.name)
-            language = LanguageOrm(name=new_user.language.name)
-            gender = GenderOrm(name=new_user.gender.name)
+            country = CountryOrm(name=new_user['city']['country']['name'])
+            city = CityOrm(country=country, name=new_user['city']['name'])
+            language = LanguageOrm(name=new_user['language']['name'])
+            gender = GenderOrm(name=new_user['gender']['name'])
             session.add(UserOrm(
-                first_name=new_user.first_name,
-                last_name=new_user.last_name,
-                birth_date=new_user.birth_date,
+                first_name=new_user['first_name'],
+                last_name=new_user['last_name'],
+                birth_date=new_user['birth_date'],
                 city=city,
                 language=language,
                 gender=gender,
@@ -187,12 +161,13 @@ async def handle_request(
     if method == 'POST':
         types = controller.__annotations__
         for arg_name, arg_type in types.items():
-            if issubclass(arg_type, BaseModel):
+            if issubclass(arg_type, Schema):
                 body = parser.get_body()
-                pydantic_object = arg_type.model_validate_json(body)
-                response = await controller(**{arg_name: pydantic_object})
-                if isinstance(response, BaseModel):
-                    response = response.model_dump_json()
+                schema = arg_type()
+                parsed_dict = schema.loads(body)
+                response = await controller(**{arg_name: parsed_dict})
+                if isinstance(response, dict):
+                    response = schema.dumps(response)
                 break
     else:
         response: str = await controller()
