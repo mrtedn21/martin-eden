@@ -48,6 +48,9 @@ def write_pydantic_models_to_openapi():
 
     definitions = resulting_schema['definitions']
     change_openapi_schema_root(definitions)
+
+    for schema in definitions.values():
+        schema.pop('additionalProperties', None)
     #_, defs = models_json_schema(
     #    [(model, 'validation') for model in defined_pydantic_models.values()],
     #    ref_template='#/components/schemas/{model}',
