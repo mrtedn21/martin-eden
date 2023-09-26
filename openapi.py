@@ -60,18 +60,15 @@ def set_response_for_openapi_method(
     response_schema = dict_set(
         openapi_method, 'responses.200.content.application/json.schema', {},
     )
-    if type(schema) == GenericAlias:
-        outer_type, inner_type = parse_complex_annotation(schema)
-    elif isinstance(schema, Schema):
-        if schema.many:
-            response_schema['type'] = 'array'
-            response_schema['items'] = {
-                '$ref': SCHEMA_PATH_TEMPLATE.format(type(schema).__name__),
-            }
-        else:
-            response_schema['$ref'] = SCHEMA_PATH_TEMPLATE.format(
-                type(schema).__name__,
-            )
+    if schema.many:
+        response_schema['type'] = 'array'
+        response_schema['items'] = {
+            '$ref': SCHEMA_PATH_TEMPLATE.format(type(schema).__name__),
+        }
+    else:
+        response_schema['$ref'] = SCHEMA_PATH_TEMPLATE.format(
+            type(schema).__name__,
+        )
 
 
 def set_request_for_openapi_method(
@@ -107,16 +104,3 @@ def add_openapi_path(
 
     set_response_for_openapi_method(openapi_new_method, response)
     set_request_for_openapi_method(openapi_new_method, request)
-
-
-def parse_complex_annotation(annotation: GenericAlias) -> tuple[type, type]:
-    """If annotation is complex type hint, like list[UserGetModel], then
-    the function will return outer type and inner type. In example
-    with list[UserGetModel] return types will be list and UserGetModel.
-    """
-    # annotation() is initialize its outer type
-    if isinstance(annotation(), list):
-        # There are inner types in annotation.__args__
-        inner_type = annotation.__args__[0]
-        if issubclass(inner_type, Schema):
-            return list, inner_type
