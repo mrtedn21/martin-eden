@@ -52,39 +52,43 @@ def write_pydantic_models_to_openapi():
 
 
 def set_response_for_openapi_method(
-    openapi_method: dict, controller: Callable,
+    openapi_method: dict, schema=None,
 ):
-    return_annotation = controller.__annotations__.pop('return', None)
-    if not return_annotation:
+    if not schema:
         return
 
     response_schema = dict_set(
         openapi_method, 'responses.200.content.application/json.schema', {},
     )
-    if type(return_annotation) == GenericAlias:
-        outer_type, inner_type = parse_complex_annotation(return_annotation)
-        response_schema['type'] = 'array'
-        response_schema['items'] = {
-            '$ref': SCHEMA_PATH_TEMPLATE.format(inner_type.__name__),
-        }
-    elif issubclass(return_annotation, Schema):
-        response_schema['$ref'] = SCHEMA_PATH_TEMPLATE.format(
-            return_annotation.__name__,
-        )
-
-
-def set_request_for_openapi_method(openapi_method: dict, controller: Callable):
-    for arg_type in controller.__annotations__.values():
-        if issubclass(arg_type, Schema):
-            request_schema = dict_set(
-                openapi_method, 'requestBody.content.application/json.schema',
-                {},
+    if type(schema) == GenericAlias:
+        outer_type, inner_type = parse_complex_annotation(schema)
+    elif isinstance(schema, Schema):
+        if schema.many:
+            response_schema['type'] = 'array'
+            response_schema['items'] = {
+                '$ref': SCHEMA_PATH_TEMPLATE.format(type(schema).__name__),
+            }
+        else:
+            response_schema['$ref'] = SCHEMA_PATH_TEMPLATE.format(
+                type(schema).__name__,
             )
-            schema_path = SCHEMA_PATH_TEMPLATE.format(arg_type.__name__)
-            request_schema['$ref'] = schema_path
 
 
-def add_openapi_path(path: str, method: str, controller: Callable):
+def set_request_for_openapi_method(
+    openapi_method: dict, schema=None,
+):
+    if schema and isinstance(schema, Schema):
+        request_schema = dict_set(
+            openapi_method, 'requestBody.content.application/json.schema',
+            {},
+        )
+        schema_path = SCHEMA_PATH_TEMPLATE.format(type(schema).__name__)
+        request_schema['$ref'] = schema_path
+
+
+def add_openapi_path(
+    path: str, method: str, controller: Callable, request: Schema = None, response: Schema = None,
+):
     # in the framework /schema/ is used for openapi, therefore no need
     # create openapi description of method that create openapi schema
     if path == '/schema/':
@@ -101,8 +105,8 @@ def add_openapi_path(path: str, method: str, controller: Callable):
         path.replace('/', '') + '_' + method.lower()
     )
 
-    set_response_for_openapi_method(openapi_new_method, controller)
-    set_request_for_openapi_method(openapi_new_method, controller)
+    set_response_for_openapi_method(openapi_new_method, response)
+    set_request_for_openapi_method(openapi_new_method, request)
 
 
 def parse_complex_annotation(annotation: GenericAlias) -> tuple[type, type]:

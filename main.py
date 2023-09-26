@@ -90,8 +90,8 @@ class User(UserSchema, metaclass=MarshmallowToDataclass):
     gender: Gender = None
 
 
-@register_route('/users/', ('get', ))
-async def get_users() -> list[UserSchema]:
+@register_route('/users/', ('get', ), response=UserSchema(many=True))
+async def get_users() -> list[User]:
     async with db.create_session() as session:
         sql_query = (
             select(
@@ -107,16 +107,8 @@ async def get_users() -> list[UserSchema]:
         return schema.dump(map(itemgetter(0), users))
 
 
-def dataclass_from_dict(klass, d):
-    try:
-        fieldtypes = {f.name:f.type for f in dataclasses.fields(klass)}
-        return klass(**{f:dataclass_from_dict(fieldtypes[f],d[f]) for f in d})
-    except:
-        return d # Not a dataclass field
-
-
-@register_route('/users/', ('post', ))
-async def create_user(new_user: UserSchema) -> UserSchema:
+@register_route('/users/', ('post', ), request=UserSchema(), response=UserSchema())
+async def create_user(new_user: User) -> User:
     from_dict(data_class=User, data=new_user)
     async with db.create_session() as session:
         async with session.begin():
