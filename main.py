@@ -109,21 +109,21 @@ async def get_users() -> list[User]:
 
 @register_route('/users/', ('post', ), request=UserSchema(), response=UserSchema())
 async def create_user(new_user: User) -> User:
-    from_dict(data_class=User, data=new_user)
     async with db.create_session() as session:
         async with session.begin():
-            country = CountryOrm(name=new_user['city']['country']['name'])
-            city = CityOrm(country=country, name=new_user['city']['name'])
-            language = LanguageOrm(name=new_user['language']['name'])
-            gender = GenderOrm(name=new_user['gender']['name'])
-            session.add(UserOrm(
-                first_name=new_user['first_name'],
-                last_name=new_user['last_name'],
-                birth_date=new_user['birth_date'],
+            country = CountryOrm(name=new_user.city.country.name)
+            city = CityOrm(country=country, name=new_user.city.name)
+            language = LanguageOrm(name=new_user.language.name)
+            gender = GenderOrm(name=new_user.gender.name)
+            user_obj = UserOrm(
+                first_name=new_user.first_name,
+                last_name=new_user.last_name,
+                birth_date=new_user.birth_date,
                 city=city,
                 language=language,
                 gender=gender,
-            ))
+            )
+            session.add(user_obj)
     return new_user
 
 
@@ -160,14 +160,18 @@ async def handle_request(
 
     if method == 'POST':
         types = controller.__annotations__
+        controller_schema = controller.request
+
+        body = parser.get_body()
+        parsed_dict = controller_schema.loads(body)
+
         for arg_name, arg_type in types.items():
-            if issubclass(arg_type, Schema):
-                body = parser.get_body()
-                schema = arg_type()
-                parsed_dict = schema.loads(body)
-                response = await controller(**{arg_name: parsed_dict})
+            if dataclasses.is_dataclass(arg_type):
+                response = await controller(**{arg_name: from_dict(arg_type, parsed_dict)})
+                if dataclasses.is_dataclass(response):
+                    response = dataclasses.asdict(response)
                 if isinstance(response, dict):
-                    response = schema.dumps(response)
+                    response = controller_schema.dumps(response)
                 break
     else:
         response: str = await controller()

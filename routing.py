@@ -33,6 +33,8 @@ def register_route(path, methods, request=None, response=None):
         def wrapped_f(*args, **kwargs):
             func(*args, **kwargs)
 
+        func.request = request
+        func.response = response
         _register_route(path, methods, func, request, response)
         return wrapped_f
 
