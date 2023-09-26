@@ -1,4 +1,6 @@
 import asyncio
+from dacite import from_dict
+import dataclasses
 from marshmallow import Schema
 from operator import itemgetter
 from sqlalchemy.exc import MissingGreenlet
@@ -15,6 +17,7 @@ from database import (
     CountryOrm,
     DataBase,
     SqlAlchemyToMarshmallow,
+    MarshmallowToDataclass,
     UserOrm,
     GenderOrm,
     LanguageOrm,
@@ -43,96 +46,52 @@ def get_dict_from_orm_object(some_object):
     return result_data
 
 
-class CountryGetModel(CountryOrm, metaclass=SqlAlchemyToMarshmallow):
-    fields = '__all__'
+class CountrySchema(CountryOrm, metaclass=SqlAlchemyToMarshmallow):
+    pass
 
 
-class CountryCreateModel(CountryOrm, metaclass=SqlAlchemyToMarshmallow):
-    fields = '__without_pk__'
+class LanguageSchema(LanguageOrm, metaclass=SqlAlchemyToMarshmallow):
+    pass
 
 
-class CityGetModel(CityOrm, metaclass=SqlAlchemyToMarshmallow):
-    fields = '__all__'
-    country = CountryGetModel
+class GenderSchema(GenderOrm, metaclass=SqlAlchemyToMarshmallow):
+    pass
 
 
-class CityCreateModel(CityOrm, metaclass=SqlAlchemyToMarshmallow):
-    fields = '__without_pk__'
-    country = CountryCreateModel
+class CitySchema(CityOrm, metaclass=SqlAlchemyToMarshmallow):
+    country = CountrySchema
 
 
-class LanguageGetModel(LanguageOrm, metaclass=SqlAlchemyToMarshmallow):
-    fields = '__all__'
+class UserSchema(UserOrm, metaclass=SqlAlchemyToMarshmallow):
+    city = CitySchema
+    language = LanguageSchema
+    gender = GenderSchema
 
 
-class LanguageCreateModel(LanguageOrm, metaclass=SqlAlchemyToMarshmallow):
-    fields = '__without_pk__'
+class Country(CountrySchema, metaclass=MarshmallowToDataclass):
+    pass
 
 
-class GenderGetModel(GenderOrm, metaclass=SqlAlchemyToMarshmallow):
-    fields = '__all__'
+class Language(LanguageSchema, metaclass=MarshmallowToDataclass):
+    pass
 
 
-class GenderCreateModel(GenderOrm, metaclass=SqlAlchemyToMarshmallow):
-    fields = '__without_pk__'
+class Gender(GenderSchema, metaclass=MarshmallowToDataclass):
+    pass
 
 
-class UserGetModel(UserOrm, metaclass=SqlAlchemyToMarshmallow):
-    fields = '__all__'
-    city = CityGetModel
-    language = LanguageGetModel
-    gender = GenderGetModel
-
-
-class UserCreateModel(UserOrm, metaclass=SqlAlchemyToMarshmallow):
-    fields = '__without_pk__'
-    city = CityCreateModel
-    language = LanguageCreateModel
-    gender = GenderCreateModel
-
-
-from dataclasses import dataclass
-from typing import Optional
-
-
-@dataclass
-class Country:
-    pk: Optional[int] = None
-    name: Optional[str] = None
-
-
-@dataclass
-class Language:
-    pk: Optional[int] = None
-    name: Optional[str] = None
-
-
-@dataclass
-class Gender:
-    pk: Optional[int] = None
-    name: Optional[str] = None
-
-
-@dataclass
-class City:
-    pk: Optional[int] = None
-    name: Optional[str] = None
+class City(CitySchema, metaclass=MarshmallowToDataclass):
     country: Country = None
 
 
-@dataclass
-class User:
-    pk: Optional[int] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    birth_date: Optional[date] = None
-    city: Optional[City] = None
-    language: Optional[Language] = None
-    gender: Optional[Gender] = None
+class User(UserSchema, metaclass=MarshmallowToDataclass):
+    city: City = None
+    language: Language = None
+    gender: Gender = None
 
 
 @register_route('/users/', ('get', ))
-async def get_users() -> list[UserGetModel]:
+async def get_users() -> list[UserSchema]:
     async with db.create_session() as session:
         sql_query = (
             select(
@@ -144,13 +103,12 @@ async def get_users() -> list[UserGetModel]:
 
         result = await session.execute(sql_query)
         users = result.fetchall()
-        schema = UserGetModel(many=True)
+        schema = UserSchema(many=True)
         return schema.dump(map(itemgetter(0), users))
 
 
 def dataclass_from_dict(klass, d):
     try:
-        import dataclasses
         fieldtypes = {f.name:f.type for f in dataclasses.fields(klass)}
         return klass(**{f:dataclass_from_dict(fieldtypes[f],d[f]) for f in d})
     except:
@@ -158,7 +116,8 @@ def dataclass_from_dict(klass, d):
 
 
 @register_route('/users/', ('post', ))
-async def create_user(new_user: UserCreateModel) -> UserCreateModel:
+async def create_user(new_user: UserSchema) -> UserSchema:
+    from_dict(data_class=User, data=new_user)
     async with db.create_session() as session:
         async with session.begin():
             country = CountryOrm(name=new_user['city']['country']['name'])

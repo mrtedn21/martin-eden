@@ -1,5 +1,7 @@
+import dataclasses
 from datetime import date
 from typing import Callable
+from dataclasses import make_dataclass, field
 
 from marshmallow.fields import Str, DateTime, Date, Int, Nested
 from marshmallow import Schema
@@ -29,6 +31,13 @@ types_map = {
     int: Int,
     date: Date,
 }
+
+reverse_types_map = {
+    Str: str,
+    Int: int,
+    Date: date,
+}
+
 
 
 class SqlAlchemyToMarshmallow(type(Base)):
@@ -65,25 +74,18 @@ class SqlAlchemyToMarshmallow(type(Base)):
             and not cls.is_property_foreign_key(origin_model, field_name)
         ]
 
-        defined_fields = fields['fields']
-        if defined_fields == '__all__':
-            defined_fields = origin_model_field_names
-        elif defined_fields == '__without_pk__':
-            defined_fields = tuple(set(origin_model_field_names) - {'pk'})
-
         # Create simple fields, of type int, str, etc.
         result_fields = {
-            field_name: types_map[getattr(origin_model, field_name).type.python_type](required=True)
-            for field_name in defined_fields
-            if field_name in origin_model_field_names and
+            field_name: types_map[getattr(origin_model, field_name).type.python_type](required=False)
+            for field_name in origin_model_field_names
             # if alchemy field has 'type' property,
             # it means the field is simple, int, str, etc.
-            hasattr(getattr(origin_model, field_name), 'type')
+            if hasattr(getattr(origin_model, field_name), 'type')
         }
 
         # Create complex fields, of marshmallow schemas,
         # for creating nested marshmallow schemas
-        for field_name in defined_fields:
+        for field_name in origin_model_field_names:
             if (field_name in origin_model_field_names
                 and fields.get(field_name)
                 and not hasattr(getattr(origin_model, field_name), 'type')
@@ -133,6 +135,35 @@ class SqlAlchemyToMarshmallow(type(Base)):
             return True
         else:
             return False
+
+
+class MarshmallowToDataclass(type(Schema)):
+    def __new__(cls, name, bases, fields):
+        origin_schema_class = bases[0]
+        origin_schema = origin_schema_class()
+        origin_model_fields = origin_schema.fields
+
+        # Create simple fields, of type int, str, etc.
+        result_fields = [
+            (field_name, reverse_types_map[type(field_type)], field(default=None))
+            for field_name, field_type in origin_model_fields.items()
+            if not isinstance(field_type, Nested)
+        ]
+
+        # Create complex fields, of marshmallow schemas,
+        # for creating nested marshmallow schemas
+        for field_name, field_type in origin_model_fields.items():
+            if isinstance(field_type, Nested):
+                result_fields.append(
+                    (field_name, fields['__annotations__'][field_name], field(default=None))
+                )
+
+        @dataclasses.dataclass
+        class BaseDataclass:
+            pass
+
+        result_model = make_dataclass(name, fields=result_fields, bases=(BaseDataclass,))
+        return result_model
 
 
 class UserOrm(Base):
