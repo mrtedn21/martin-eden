@@ -107,7 +107,7 @@ async def get_users() -> list[User]:
         return schema.dump(map(itemgetter(0), users))
 
 
-@register_route('/users/', ('post', ), request=UserSchema(), response=UserSchema())
+@register_route('/users/', ('post', ), request=UserSchema(exclude=('pk',), json_schema_name='salam cheza'), response=UserSchema())
 async def create_user(new_user: User) -> User:
     async with db.create_session() as session:
         async with session.begin():

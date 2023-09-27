@@ -2,6 +2,8 @@ import dataclasses
 from datetime import date
 from typing import Callable
 from dataclasses import make_dataclass, field
+from marshmallow import base, fields as ma_fields, class_registry, types
+from core import CustomSchema
 
 from marshmallow.fields import Str, DateTime, Date, Int, Nested
 from marshmallow import Schema
@@ -37,7 +39,6 @@ reverse_types_map = {
     Int: int,
     Date: date,
 }
-
 
 
 class SqlAlchemyToMarshmallow(type(Base)):
@@ -92,8 +93,8 @@ class SqlAlchemyToMarshmallow(type(Base)):
             ):
                 result_fields[field_name] = Nested(fields[field_name])
 
-        result_model = Schema.from_dict(result_fields, name=name)
-        register_marshmallow_schema(name, result_model)
+        result_model = CustomSchema.from_dict(result_fields, name=name)
+        #register_marshmallow_schema(name, result_model)
         return result_model
 
     @staticmethod
@@ -137,7 +138,7 @@ class SqlAlchemyToMarshmallow(type(Base)):
             return False
 
 
-class MarshmallowToDataclass(type(Schema)):
+class MarshmallowToDataclass(type(CustomSchema)):
     def __new__(cls, name, bases, fields):
         origin_schema_class = bases[0]
         origin_schema = origin_schema_class()

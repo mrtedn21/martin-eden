@@ -2,6 +2,7 @@ import json
 from types import GenericAlias
 from typing import Callable
 from marshmallow_jsonschema import JSONSchema
+from core import CustomSchema
 
 from marshmallow import Schema
 
@@ -25,8 +26,13 @@ def dict_set(dct: dict, path: str, value):
     return dct[last_key]
 
 
-def register_marshmallow_schema(name: str, schema: Schema):
-    defined_marshmallow_schemas[name] = schema
+def register_marshmallow_schema(schema: CustomSchema):
+    if not schema:
+        return
+
+    default_name = type(schema).__name__
+    defined_name = schema.json_schema_name
+    defined_marshmallow_schemas[defined_name or default_name] = schema
 
 
 def change_openapi_schema_root(dct):
@@ -41,7 +47,7 @@ def write_pydantic_models_to_openapi():
     json_schema = JSONSchema()
     resulting_schema = {}
     for schema in defined_marshmallow_schemas.values():
-        resulting_schema.update(json_schema.dump(schema()))
+        resulting_schema.update(json_schema.dump(schema))
 
     definitions = resulting_schema['definitions']
     change_openapi_schema_root(definitions)
@@ -102,5 +108,8 @@ def add_openapi_path(
         path.replace('/', '') + '_' + method.lower()
     )
 
+    register_marshmallow_schema(response)
     set_response_for_openapi_method(openapi_new_method, response)
+
+    register_marshmallow_schema(request)
     set_request_for_openapi_method(openapi_new_method, request)
