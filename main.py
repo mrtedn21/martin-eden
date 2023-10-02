@@ -90,13 +90,13 @@ class User(UserSchema, metaclass=MarshmallowToDataclass):
     gender: Gender = None
 
 
-post_response = UserSchema(exclude=('pk',), json_schema_name='UserCreateSchema')
-get_response = UserSchema(many=True, json_schema_name='UserGetSchema')
+user_create_schema = UserSchema(exclude=('pk',), json_schema_name='UserCreateSchema')
+user_get_schema = UserSchema(many=True, json_schema_name='UserGetSchema')
 
 
 @register_route(
     '/users/', ('get', ),
-    response=get_response,
+    response=user_get_schema,
 )
 async def get_users() -> list[User]:
     async with db.create_session() as session:
@@ -116,8 +116,8 @@ async def get_users() -> list[User]:
 
 @register_route(
     '/users/', ('post', ),
-    request=post_response,
-    response=post_response,
+    request=user_create_schema,
+    response=user_create_schema,
 )
 async def create_user(new_user: User) -> User:
     async with db.create_session() as session:
