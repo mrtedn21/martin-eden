@@ -1,14 +1,10 @@
 import asyncio
 from dacite import from_dict
 import dataclasses
-from marshmallow import Schema
 from operator import itemgetter
-from sqlalchemy.exc import MissingGreenlet
 import json
 import socket
 from asyncio import AbstractEventLoop
-from datetime import date
-from database import Base
 
 from sqlalchemy import select
 
@@ -27,23 +23,6 @@ from openapi import openapi_object, write_pydantic_models_to_openapi
 from routing import get_controller, register_route
 
 db = DataBase()
-
-
-def get_dict_from_orm_object(some_object):
-    result_data = {}
-    for attr in dir(some_object):
-        attr_type = type(getattr(some_object, attr))
-        if attr.startswith('_'):
-            continue
-
-        if attr_type in (str, int):
-            result_data[attr] = getattr(some_object, attr)
-        elif attr_type == date:
-            attr_date: date = getattr(some_object, attr)
-            str_date_time = attr_date.strftime('%d-%m-%Y')
-            result_data[attr] = str_date_time
-
-    return result_data
 
 
 class CountrySchema(CountryOrm, metaclass=SqlAlchemyToMarshmallow):
@@ -187,8 +166,6 @@ async def handle_request(
     else:
         response: str = await controller()
         if isinstance(response, list):
-            #python_dicts = [obj.model_dump() for obj in response]
-            #response = json.dumps(python_dicts, default=str)
             response = json.dumps(response)
 
     headers = create_response_headers(200, 'application/json')

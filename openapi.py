@@ -1,6 +1,4 @@
 import json
-from types import GenericAlias
-from typing import Callable
 from core import CustomSchema, CustomJsonSchema
 
 from marshmallow import Schema
@@ -89,7 +87,7 @@ def set_request_for_openapi_method(
 
 
 def add_openapi_path(
-    path: str, method: str, controller: Callable, request: Schema = None, response: Schema = None,
+    path: str, method: str, request: Schema = None, response: Schema = None,
 ):
     # in the framework /schema/ is used for openapi, therefore no need
     # create openapi description of method that create openapi schema

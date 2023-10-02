@@ -2,11 +2,9 @@ import dataclasses
 from datetime import date
 from typing import Callable
 from dataclasses import make_dataclass, field
-from marshmallow import base, fields as ma_fields, class_registry, types
 from core import CustomSchema
 
-from marshmallow.fields import Str, DateTime, Date, Int, Nested
-from marshmallow import Schema
+from marshmallow.fields import Str, Date, Int, Nested
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.ext.asyncio import (
@@ -22,11 +20,10 @@ from sqlalchemy.orm import (
     relationship,
 )
 
-from openapi import register_marshmallow_schema
-
 
 class Base(AsyncAttrs, DeclarativeBase):
     pass
+
 
 types_map = {
     str: Str,
@@ -94,7 +91,6 @@ class SqlAlchemyToMarshmallow(type(Base)):
                 result_fields[field_name] = Nested(fields[field_name])
 
         result_model = CustomSchema.from_dict(result_fields, name=name)
-        #register_marshmallow_schema(name, result_model)
         return result_model
 
     @staticmethod

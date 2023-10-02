@@ -18,7 +18,7 @@ def _register_route(
     new_path = routes.setdefault(path, {})
     for method in methods:
         new_path[method.upper()] = controller
-        add_openapi_path(path, method, controller, request, response)
+        add_openapi_path(path, method, request, response)
 
 
 def get_controller(path: str, method: str):
