@@ -1,8 +1,7 @@
 import json
 from types import GenericAlias
 from typing import Callable
-from marshmallow_jsonschema import JSONSchema
-from core import CustomSchema
+from core import CustomSchema, CustomJsonSchema
 
 from marshmallow import Schema
 
@@ -44,7 +43,7 @@ def change_openapi_schema_root(dct):
 
 
 def write_pydantic_models_to_openapi():
-    json_schema = JSONSchema()
+    json_schema = CustomJsonSchema()
     resulting_schema = {}
     for schema in defined_marshmallow_schemas.values():
         resulting_schema.update(json_schema.dump(schema))
@@ -69,23 +68,23 @@ def set_response_for_openapi_method(
     if schema.many:
         response_schema['type'] = 'array'
         response_schema['items'] = {
-            '$ref': SCHEMA_PATH_TEMPLATE.format(type(schema).__name__),
+            '$ref': SCHEMA_PATH_TEMPLATE.format(schema.json_schema_name),
         }
     else:
         response_schema['$ref'] = SCHEMA_PATH_TEMPLATE.format(
-            type(schema).__name__,
+            schema.json_schema_name,
         )
 
 
 def set_request_for_openapi_method(
-    openapi_method: dict, schema=None,
+    openapi_method: dict, schema: CustomSchema = None,
 ):
-    if schema and isinstance(schema, Schema):
+    if schema and isinstance(schema, CustomSchema):
         request_schema = dict_set(
             openapi_method, 'requestBody.content.application/json.schema',
             {},
         )
-        schema_path = SCHEMA_PATH_TEMPLATE.format(type(schema).__name__)
+        schema_path = SCHEMA_PATH_TEMPLATE.format(schema.json_schema_name)
         request_schema['$ref'] = schema_path
 
 
