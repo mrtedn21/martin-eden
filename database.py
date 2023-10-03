@@ -1,10 +1,12 @@
+import enum
+from sqlalchemy import Table, Column
 import dataclasses
-from datetime import date
+from datetime import date, datetime
 from typing import Callable
 from dataclasses import make_dataclass, field
 from core import CustomSchema
 
-from marshmallow.fields import Str, Date, Int, Nested
+from marshmallow.fields import Str, Date, Int, Nested, Enum as MarshmallowEnum, DateTime
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.ext.asyncio import (
@@ -29,12 +31,14 @@ types_map = {
     str: Str,
     int: Int,
     date: Date,
+    datetime: DateTime,
 }
 
 reverse_types_map = {
     Str: str,
     Int: int,
     Date: date,
+    DateTime: datetime,
 }
 
 
@@ -69,7 +73,7 @@ class SqlAlchemyToMarshmallow(type(Base)):
             if not field_name.startswith('_')
             and field_name not in alchemy_fields
             and not cls.is_property_secondary_relation(origin_model, field_name)
-            and not cls.is_property_foreign_key(origin_model, field_name)
+            #and not cls.is_property_foreign_key(origin_model, field_name)
         ]
 
         # Create simple fields, of type int, str, etc.
@@ -79,7 +83,18 @@ class SqlAlchemyToMarshmallow(type(Base)):
             # if alchemy field has 'type' property,
             # it means the field is simple, int, str, etc.
             if hasattr(getattr(origin_model, field_name), 'type')
+            if not issubclass(getattr(origin_model, field_name).type.python_type, enum.Enum)
         }
+
+        # For enums
+        result_fields.update({
+            field_name: MarshmallowEnum(getattr(origin_model, field_name).type.python_type, required=False)
+            for field_name in origin_model_field_names
+            # if alchemy field has 'type' property,
+            # it means the field is simple, int, str, etc.
+            if hasattr(getattr(origin_model, field_name), 'type')
+            if issubclass(getattr(origin_model, field_name).type.python_type, enum.Enum)
+        })
 
         # Create complex fields, of marshmallow schemas,
         # for creating nested marshmallow schemas
@@ -145,7 +160,16 @@ class MarshmallowToDataclass(type(CustomSchema)):
             (field_name, reverse_types_map[type(field_type)], field(default=None))
             for field_name, field_type in origin_model_fields.items()
             if not isinstance(field_type, Nested)
+            and not hasattr(field_type, 'enum')
         ]
+
+        # for enums
+        result_fields.extend([
+            (field_name, field_type.enum, field(default=None))
+            for field_name, field_type in origin_model_fields.items()
+            if not isinstance(field_type, Nested)
+            and hasattr(field_type, 'enum')
+        ])
 
         # Create complex fields, of marshmallow schemas,
         # for creating nested marshmallow schemas
@@ -170,6 +194,7 @@ class UserOrm(Base):
     first_name: Mapped[str]
     last_name: Mapped[str]
     birth_date: Mapped[date]
+    messages: Mapped['MessageOrm'] = relationship(back_populates='created_by')
 
     city_id: Mapped[int] = mapped_column(
         ForeignKey('cities.pk'), nullable=True,
@@ -219,6 +244,49 @@ class GenderOrm(Base):
     pk: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     gender_users: Mapped[list['UserOrm']] = relationship(back_populates='gender')
+
+
+class ChatType(enum.Enum):
+    DIRECT = 'direct'
+    GROUP = 'group'
+    SELF = 'self'
+
+
+class ChatOrm(Base):
+    __tablename__ = 'chats'
+
+    pk: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(nullable=True)
+    chat_type: Mapped[ChatType] = mapped_column(default=ChatType.DIRECT)
+
+    last_message_id: Mapped[int] = mapped_column(ForeignKey('users.pk'), nullable=True)
+    last_message: Mapped['MessageOrm'] = relationship(back_populates='last_message_in_chat')
+    messages: Mapped[list['MessageOrm']] = relationship(back_populates='chat')
+
+    participants: Mapped[list[UserOrm]] = relationship(secondary=Table(
+        "chats_to_users",
+        Base.metadata,
+        Column("chat_id", ForeignKey("chats.pk")),
+        Column("user_id", ForeignKey("users.pk")),
+    ))
+
+
+class MessageOrm(Base):
+    __tablename__ = 'messages'
+
+    pk: Mapped[int] = mapped_column(primary_key=True)
+    text: Mapped[str]
+    date_time: Mapped[datetime] = mapped_column(default=datetime.now)
+
+    created_by_id: Mapped[int] = mapped_column(ForeignKey('users.pk'))
+    created_by: Mapped['UserOrm'] = relationship(back_populates='messages')
+
+    chat_id: Mapped[int] = mapped_column(ForeignKey('chats.pk'))
+    chat: Mapped['ChatOrm'] = relationship(back_populates='messages')
+    last_message_in_chat: Mapped['ChatOrm'] = relationship(back_populates='last_message')
+
+    reply_to_message_id: Mapped[int] = mapped_column(ForeignKey('messages.pk'), nullable=True)
+    reply_to_message: Mapped['MessageOrm'] = relationship()
 
 
 class DataBase:
