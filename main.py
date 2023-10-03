@@ -102,7 +102,11 @@ user_create_schema = UserSchema(exclude=('pk', 'city_id', 'language_id', 'gender
 user_get_schema = UserSchema(exclude=('pk', 'city_id', 'language_id', 'gender_id'), many=True, json_schema_name='UserGetSchema')
 message_get_schema = MessageSchema(exclude=('reply_to_message', 'created_by_id', 'chat_id',), many=True, json_schema_name='MessageGetSchema')
 message_create_schema = MessageSchema(exclude=('pk', 'created_by', 'reply_to_message'), json_schema_name='MessageCreateSchema')
+#chat_get_schema = ChatSchema(exclude=('participants', 'messages', 'last_message_id'), many=True, json_schema_name='ChatGetSchema')
+#chat_create_schema = ChatSchema(exclude=('participants', 'messages', 'last_message', 'last_message_id'), json_schema_name='ChatCreateSchema')
 
+chat_get_schema = ChatSchema(exclude=('last_message_id',), many=True, json_schema_name='ChatGetSchema')
+chat_create_schema = ChatSchema(exclude=('last_message_id',), json_schema_name='ChatCreateSchema')
 
 @register_route(
     '/users/', ('get', ),
@@ -183,6 +187,34 @@ async def create_message(new_message: Message) -> Message:
             )
             session.add(message_obj)
     return new_message
+
+
+@register_route(
+    '/chats/', ('get', ),
+    response=chat_get_schema,
+)
+async def get_messages() -> list[Chat]:
+    async with db.create_session() as session:
+        sql_query = (select(ChatOrm))
+        result = await session.execute(sql_query)
+        chats = result.fetchall()
+        return chat_get_schema.dump(map(itemgetter(0), chats))
+
+
+@register_route(
+    '/chats/', ('post',),
+    request=chat_create_schema,
+    response=chat_create_schema,
+)
+async def create_message(new_chat: Chat) -> Chat:
+    async with db.create_session() as session:
+        async with session.begin():
+            message_obj = ChatOrm(
+                name=new_chat.name,
+                chat_type=new_chat.chat_type,
+            )
+            session.add(message_obj)
+    return new_chat
 
 
 @register_route('/schema/', ('get', ))

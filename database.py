@@ -6,7 +6,8 @@ from typing import Callable
 from dataclasses import make_dataclass, field
 from core import CustomSchema
 
-from marshmallow.fields import Str, Date, Int, Nested, Enum as MarshmallowEnum, DateTime
+from marshmallow.fields import Str, Date, Int, Nested, DateTime
+from marshmallow_enum import EnumField as MarshmallowEnum
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.ext.asyncio import (

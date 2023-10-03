@@ -257,6 +257,20 @@ lint = ["flake8 (==6.0.0)", "flake8-bugbear (==23.7.10)", "mypy (==1.4.1)", "pre
 tests = ["pytest", "pytz", "simplejson"]
 
 [[package]]
+name = "marshmallow-enum"
+version = "1.5.1"
+description = "Enum field for Marshmallow"
+optional = false
+python-versions = "*"
+files = [
+    {file = "marshmallow-enum-1.5.1.tar.gz", hash = "sha256:38e697e11f45a8e64b4a1e664000897c659b60aa57bfa18d44e226a9920b6e58"},
+    {file = "marshmallow_enum-1.5.1-py2.py3-none-any.whl", hash = "sha256:57161ab3dbfde4f57adeb12090f39592e992b9c86d206d02f6bd03ebec60f072"},
+]
+
+[package.dependencies]
+marshmallow = ">=2.0.0"
+
+[[package]]
 name = "marshmallow-jsonschema"
 version = "0.13.0"
 description = "JSON Schema Draft v7 (http://json-schema.org/) formatting with marshmallow"
@@ -467,4 +481,4 @@ test = ["Cython (>=0.29.32,<0.30.0)", "aiohttp", "flake8 (>=3.9.2,<3.10.0)", "my
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "889d05737756480c1e3d495d2444f302c88b03d3a5d51fe936c5a05be6ec3015"
+content-hash = "487c5c92b9eae36a226e788538f6c5ad6cacbc28c0c7d22f8c1498057cf11dcf"
