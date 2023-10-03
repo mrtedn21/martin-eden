@@ -103,7 +103,7 @@ class SqlAlchemyToMarshmallow(type(Base)):
                 and fields.get(field_name)
                 and not hasattr(getattr(origin_model, field_name), 'type')
             ):
-                result_fields[field_name] = Nested(fields[field_name])
+                result_fields[field_name] = Nested(fields[field_name], required=False)
 
         result_model = CustomSchema.from_dict(result_fields, name=name)
         return result_model
@@ -286,7 +286,7 @@ class MessageOrm(Base):
     last_message_in_chat: Mapped['ChatOrm'] = relationship(back_populates='last_message')
 
     reply_to_message_id: Mapped[int] = mapped_column(ForeignKey('messages.pk'), nullable=True)
-    reply_to_message: Mapped['MessageOrm'] = relationship()
+    reply_to_message: Mapped['MessageOrm'] = relationship(remote_side=[pk])
 
 
 class DataBase:

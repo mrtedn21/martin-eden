@@ -7,6 +7,7 @@ import socket
 from asyncio import AbstractEventLoop
 
 from sqlalchemy import select
+from sqlalchemy.orm import aliased
 
 from database import (
     CityOrm,
@@ -57,10 +58,13 @@ class ChatSchema(ChatOrm, metaclass=SqlAlchemyToMarshmallow):
     pass
 
 
+class ShortMessageSchema(MessageOrm, metaclass=SqlAlchemyToMarshmallow):
+    pass
+
+
 class MessageSchema(MessageOrm, metaclass=SqlAlchemyToMarshmallow):
     created_by = UserSchema(only=('pk', 'first_name', 'last_name'))
-    #chat = ChatSchema
-    #reply_to_message = ShortMessageSchema
+    reply_to_message = ShortMessageSchema(only=('pk', 'text', 'created_by_id'))
 
 
 class Country(CountrySchema, metaclass=MarshmallowToDataclass):
@@ -91,12 +95,13 @@ class User(UserSchema, metaclass=MarshmallowToDataclass):
 
 class Message(MessageSchema, metaclass=MarshmallowToDataclass):
     created_by: User = None
+    reply_to_message: "Message" = None
 
 
 user_create_schema = UserSchema(exclude=('pk', 'city_id', 'language_id', 'gender_id'), json_schema_name='UserCreateSchema')
 user_get_schema = UserSchema(exclude=('pk', 'city_id', 'language_id', 'gender_id'), many=True, json_schema_name='UserGetSchema')
-message_get_schema = MessageSchema(many=True, json_schema_name='MessageGetSchema')
-message_create_schema = MessageSchema(exclude=('pk', 'created_by'), json_schema_name='MessageCreateSchema')
+message_get_schema = MessageSchema(exclude=('reply_to_message', 'created_by_id', 'chat_id',), many=True, json_schema_name='MessageGetSchema')
+message_create_schema = MessageSchema(exclude=('pk', 'created_by', 'reply_to_message'), json_schema_name='MessageCreateSchema')
 
 
 @register_route(
@@ -151,16 +156,14 @@ async def get_messages() -> list[Message]:
     async with db.create_session() as session:
         sql_query = (
             select(
-                UserOrm, CityOrm, CountryOrm, LanguageOrm, GenderOrm
-            ).select_from(UserOrm)
-            .outerjoin(CityOrm).outerjoin(CountryOrm)
-            .outerjoin(LanguageOrm).outerjoin(GenderOrm)
+                MessageOrm, UserOrm
+            ).select_from(MessageOrm)
+            .outerjoin(UserOrm)
         )
 
         result = await session.execute(sql_query)
-        users = result.fetchall()
-        schema = UserSchema(many=True)
-        return schema.dump(map(itemgetter(0), users))
+        messages = result.fetchall()
+        return message_get_schema.dump(map(itemgetter(0), messages))
 
 
 @register_route(
