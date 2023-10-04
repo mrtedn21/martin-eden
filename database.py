@@ -36,11 +36,32 @@ types_map = {
 }
 
 reverse_types_map = {
-    Str: str,
-    Int: int,
-    Date: date,
-    DateTime: datetime,
+    value: key for key, value in types_map.items()
 }
+
+
+registered_models = {}
+
+
+def register_model(model_class):
+    model_name = model_class.__name__
+    # remove "Orm" postfix from model name
+    model_name = model_name[:-3]
+    model_name = model_name.lower()
+    registered_models[model_name] = model_class
+
+
+def query_params_to_alchemy_filters(query_param, value):
+    """Example of query_param:
+        user__first_name__like=martin"""
+    model_name, field_name, method_name = query_param.split('__')
+    model_class = registered_models[model_name]
+    field_obj = getattr(model_class, field_name)
+    method_obj = getattr(field_obj, method_name)
+    if method_name == 'like':
+        return method_obj(f'%{value}%')
+    else:
+        return method_obj(value)
 
 
 class SqlAlchemyToMarshmallow(type(Base)):
@@ -63,6 +84,7 @@ class SqlAlchemyToMarshmallow(type(Base)):
 
     def __new__(cls, name, bases, fields):
         origin_model = bases[0]
+        register_model(origin_model)
 
         # alchemy_fields variable needs to exclude these
         # properties from origin_model_field_names

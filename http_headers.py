@@ -24,16 +24,30 @@ class HttpHeadersParser:
         first_word = first_line.split(' ')[0]
         return first_word
 
-    def get_path(self):
-        # Path is second word of first line
+    def _get_path_and_query_params(self):
         first_line = self.lines_of_header[0]
         second_word = first_line.split(' ')[1]
-        return second_word
+        return second_word.split('?')
+
+    def get_path(self):
+        url_parts = self._get_path_and_query_params()
+        return url_parts[0]
+
+    def get_query_params(self):
+        url_parts = self._get_path_and_query_params()
+        if len(url_parts) == 1:
+            return
+
+        query_params = {}
+        for query_param in url_parts[1].split('&'):
+            key, value = query_param.split('=')
+            query_params[key] = value
+        return query_params
 
     def get_body(self):
         position_of_body_starts = (
-            self.message.find(self.line_break_char * 2) +
-            len(self.line_break_char * 2)
+                self.message.find(self.line_break_char * 2) +
+                len(self.line_break_char * 2)
         )
         return self.message[position_of_body_starts:]
 

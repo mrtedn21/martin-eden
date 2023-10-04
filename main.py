@@ -1,10 +1,12 @@
 import asyncio
+from inspect import signature
 from dacite import from_dict
 import dataclasses
 from operator import itemgetter
 import json
 import socket
 from asyncio import AbstractEventLoop
+from database import query_params_to_alchemy_filters
 
 from sqlalchemy import select
 from sqlalchemy.orm import aliased
@@ -112,7 +114,7 @@ chat_create_schema = ChatSchema(exclude=('last_message_id',), json_schema_name='
     '/users/', ('get', ),
     response=user_list_get_schema,
 )
-async def get_users() -> str:
+async def get_users(query_params) -> str:
     async with db.create_session() as session:
         sql_query = (
             select(
@@ -120,6 +122,7 @@ async def get_users() -> str:
             ).select_from(UserOrm)
             .outerjoin(CityOrm).outerjoin(CountryOrm)
             .outerjoin(LanguageOrm).outerjoin(GenderOrm)
+            .filter(query_params)
         )
         result = await session.execute(sql_query)
         return user_list_get_schema.dumps(map(itemgetter(0), result.fetchall()))
@@ -230,6 +233,7 @@ async def handle_request(
     parser = HttpHeadersParser(message)
     path = parser.get_path()
     method = parser.get_method_name()
+    query_params = parser.get_query_params()
 
     if method == 'OPTIONS':
         headers = create_response_headers(200, 'application/json')
@@ -265,7 +269,12 @@ async def handle_request(
                         response = json.dumps(response)
                 break
     else:
-        response: str = await controller()
+        if 'query_params' in list(dict(signature(controller).parameters).keys()):
+            key, value = list(query_params.items())[0]
+            response: str = await controller(query_params=query_params_to_alchemy_filters(key, value))
+        else:
+            response: str = await controller()
+
         if isinstance(response, list):
             response = json.dumps(response)
 
