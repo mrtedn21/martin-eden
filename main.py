@@ -99,14 +99,14 @@ class Message(MessageSchema, metaclass=MarshmallowToDataclass):
 
 
 user_create_schema = UserSchema(exclude=('pk', 'city_id', 'language_id', 'gender_id'), json_schema_name='UserCreateSchema')
-user_get_schema = UserSchema(exclude=('pk', 'city_id', 'language_id', 'gender_id'), many=True, json_schema_name='UserGetSchema')
+user_list_get_schema = UserSchema(exclude=('city_id', 'language_id', 'gender_id'), many=True, json_schema_name='UserGetSchema')
+user_get_schema = UserSchema(exclude=('city_id', 'language_id', 'gender_id'), json_schema_name='UserGetSchema')
+
 message_get_schema = MessageSchema(exclude=('reply_to_message', 'created_by_id', 'chat_id',), many=True, json_schema_name='MessageGetSchema')
 message_create_schema = MessageSchema(exclude=('pk', 'created_by', 'reply_to_message'), json_schema_name='MessageCreateSchema')
-#chat_get_schema = ChatSchema(exclude=('participants', 'messages', 'last_message_id'), many=True, json_schema_name='ChatGetSchema')
-#chat_create_schema = ChatSchema(exclude=('participants', 'messages', 'last_message', 'last_message_id'), json_schema_name='ChatCreateSchema')
-
 chat_get_schema = ChatSchema(exclude=('last_message_id',), many=True, json_schema_name='ChatGetSchema')
 chat_create_schema = ChatSchema(exclude=('last_message_id',), json_schema_name='ChatCreateSchema')
+
 
 @register_route(
     '/users/', ('get', ),
@@ -131,7 +131,7 @@ async def get_users() -> list[User]:
 @register_route(
     '/users/', ('post', ),
     request=user_create_schema,
-    response=user_create_schema,
+    response=user_get_schema,
 )
 async def create_user(new_user: User) -> User:
     async with db.create_session() as session:
@@ -149,7 +149,8 @@ async def create_user(new_user: User) -> User:
                 gender=gender,
             )
             session.add(user_obj)
-    return new_user
+            await session.flush()
+            return user_get_schema.dump(user_obj)
 
 
 @register_route(
@@ -261,7 +262,10 @@ async def handle_request(
                 if dataclasses.is_dataclass(response):
                     response = dataclasses.asdict(response)
                 if isinstance(response, dict):
-                    response = controller_schema.dumps(response)
+                    try:
+                        response = controller_schema.dumps(response)
+                    except TypeError:
+                        response = json.dumps(response)
                 break
     else:
         response: str = await controller()
