@@ -110,9 +110,9 @@ chat_create_schema = ChatSchema(exclude=('last_message_id',), json_schema_name='
 
 @register_route(
     '/users/', ('get', ),
-    response=user_get_schema,
+    response=user_list_get_schema,
 )
-async def get_users() -> list[User]:
+async def get_users() -> str:
     async with db.create_session() as session:
         sql_query = (
             select(
@@ -121,11 +121,8 @@ async def get_users() -> list[User]:
             .outerjoin(CityOrm).outerjoin(CountryOrm)
             .outerjoin(LanguageOrm).outerjoin(GenderOrm)
         )
-
         result = await session.execute(sql_query)
-        users = result.fetchall()
-        schema = UserSchema(many=True)
-        return schema.dump(map(itemgetter(0), users))
+        return user_list_get_schema.dumps(map(itemgetter(0), result.fetchall()))
 
 
 @register_route(
