@@ -1,227 +1,23 @@
+from chats import controllers
+from users import controllers
+
 import asyncio
 from inspect import signature
 from dacite import from_dict
 import dataclasses
-from operator import itemgetter
 import json
 import socket
 from asyncio import AbstractEventLoop
 from database import query_params_to_alchemy_filters
 
-from sqlalchemy import select
-from sqlalchemy.orm import aliased
-
 from database import (
-    CityOrm,
-    CountryOrm,
     DataBase,
-    SqlAlchemyToMarshmallow,
-    MarshmallowToDataclass,
-    UserOrm,
-    GenderOrm,
-    LanguageOrm,
-    MessageOrm,
-    ChatOrm,
 )
 from http_headers import HttpHeadersParser, create_response_headers
 from openapi import openapi_object, write_pydantic_models_to_openapi
 from routing import get_controller, register_route
 
 db = DataBase()
-
-
-class CountrySchema(CountryOrm, metaclass=SqlAlchemyToMarshmallow):
-    pass
-
-
-class LanguageSchema(LanguageOrm, metaclass=SqlAlchemyToMarshmallow):
-    pass
-
-
-class GenderSchema(GenderOrm, metaclass=SqlAlchemyToMarshmallow):
-    pass
-
-
-class CitySchema(CityOrm, metaclass=SqlAlchemyToMarshmallow):
-    country = CountrySchema
-
-
-class UserSchema(UserOrm, metaclass=SqlAlchemyToMarshmallow):
-    city = CitySchema
-    language = LanguageSchema
-    gender = GenderSchema
-
-
-#class ShortMessageSchema(MessageOrm, metaclass=SqlAlchemyToMarshmallow):
-#    pass
-
-
-class ChatSchema(ChatOrm, metaclass=SqlAlchemyToMarshmallow):
-    pass
-
-
-class ShortMessageSchema(MessageOrm, metaclass=SqlAlchemyToMarshmallow):
-    pass
-
-
-class MessageSchema(MessageOrm, metaclass=SqlAlchemyToMarshmallow):
-    created_by = UserSchema(only=('pk', 'first_name', 'last_name'))
-    reply_to_message = ShortMessageSchema(only=('pk', 'text', 'created_by_id'))
-
-
-class Country(CountrySchema, metaclass=MarshmallowToDataclass):
-    pass
-
-
-class Language(LanguageSchema, metaclass=MarshmallowToDataclass):
-    pass
-
-
-class Gender(GenderSchema, metaclass=MarshmallowToDataclass):
-    pass
-
-
-class City(CitySchema, metaclass=MarshmallowToDataclass):
-    country: Country = None
-
-
-class Chat(ChatSchema, metaclass=MarshmallowToDataclass):
-    pass
-
-
-class User(UserSchema, metaclass=MarshmallowToDataclass):
-    city: City = None
-    language: Language = None
-    gender: Gender = None
-
-
-class Message(MessageSchema, metaclass=MarshmallowToDataclass):
-    created_by: User = None
-    reply_to_message: "Message" = None
-
-
-user_create_schema = UserSchema(exclude=('pk', 'city_id', 'language_id', 'gender_id'), json_schema_name='UserCreateSchema')
-user_list_get_schema = UserSchema(exclude=('city_id', 'language_id', 'gender_id'), many=True, json_schema_name='UserGetSchema')
-user_get_schema = UserSchema(exclude=('city_id', 'language_id', 'gender_id'), json_schema_name='UserGetSchema')
-
-message_get_schema = MessageSchema(exclude=('reply_to_message', 'created_by_id', 'chat_id',), many=True, json_schema_name='MessageGetSchema')
-message_create_schema = MessageSchema(exclude=('pk', 'created_by', 'reply_to_message'), json_schema_name='MessageCreateSchema')
-chat_get_schema = ChatSchema(exclude=('last_message_id',), many=True, json_schema_name='ChatGetSchema')
-chat_create_schema = ChatSchema(exclude=('last_message_id',), json_schema_name='ChatCreateSchema')
-
-
-@register_route(
-    '/users/', ('get', ),
-    response=user_list_get_schema,
-    query_params={
-        UserOrm: ['first_name', 'last_name'],
-        CityOrm: ['name'],
-        CountryOrm: ['name'],
-        GenderOrm: ['name'],
-    }
-)
-async def get_users(query_params) -> str:
-    async with db.create_session() as session:
-        sql_query = (
-            select(
-                UserOrm, CityOrm, CountryOrm, LanguageOrm, GenderOrm
-            ).select_from(UserOrm)
-            .outerjoin(CityOrm).outerjoin(CountryOrm)
-            .outerjoin(LanguageOrm).outerjoin(GenderOrm)
-            .filter(query_params)
-        )
-        result = await session.execute(sql_query)
-        return user_list_get_schema.dumps(map(itemgetter(0), result.fetchall()))
-
-
-@register_route(
-    '/users/', ('post', ),
-    request=user_create_schema,
-    response=user_get_schema,
-)
-async def create_user(new_user: User) -> User:
-    async with db.create_session() as session:
-        async with session.begin():
-            country = CountryOrm(name=new_user.city.country.name)
-            city = CityOrm(country=country, name=new_user.city.name)
-            language = LanguageOrm(name=new_user.language.name)
-            gender = GenderOrm(name=new_user.gender.name)
-            user_obj = UserOrm(
-                first_name=new_user.first_name,
-                last_name=new_user.last_name,
-                birth_date=new_user.birth_date,
-                city=city,
-                language=language,
-                gender=gender,
-            )
-            session.add(user_obj)
-            await session.flush()
-            return user_get_schema.dump(user_obj)
-
-
-@register_route(
-    '/messages/', ('get', ),
-    response=message_get_schema,
-)
-async def get_messages() -> list[Message]:
-    async with db.create_session() as session:
-        sql_query = (
-            select(
-                MessageOrm, UserOrm
-            ).select_from(MessageOrm)
-            .outerjoin(UserOrm)
-        )
-
-        result = await session.execute(sql_query)
-        messages = result.fetchall()
-        return message_get_schema.dump(map(itemgetter(0), messages))
-
-
-@register_route(
-    '/messages/', ('post',),
-    request=message_create_schema,
-    response=message_create_schema,
-)
-async def create_message(new_message: Message) -> Message:
-    async with db.create_session() as session:
-        async with session.begin():
-            message_obj = MessageOrm(
-                chat_id=new_message.chat_id,
-                created_by_id=new_message.created_by_id,
-                date_time=new_message.date_time.replace(tzinfo=None),
-                reply_to_message_id=new_message.reply_to_message_id,
-                text=new_message.text,
-            )
-            session.add(message_obj)
-    return new_message
-
-
-@register_route(
-    '/chats/', ('get', ),
-    response=chat_get_schema,
-)
-async def get_messages() -> list[Chat]:
-    async with db.create_session() as session:
-        sql_query = (select(ChatOrm))
-        result = await session.execute(sql_query)
-        chats = result.fetchall()
-        return chat_get_schema.dump(map(itemgetter(0), chats))
-
-
-@register_route(
-    '/chats/', ('post',),
-    request=chat_create_schema,
-    response=chat_create_schema,
-)
-async def create_message(new_chat: Chat) -> Chat:
-    async with db.create_session() as session:
-        async with session.begin():
-            message_obj = ChatOrm(
-                name=new_chat.name,
-                chat_type=new_chat.chat_type,
-            )
-            session.add(message_obj)
-    return new_chat
 
 
 @register_route('/schema/', ('get', ))

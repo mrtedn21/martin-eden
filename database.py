@@ -1,6 +1,5 @@
 import enum
 from utils import get_string_of_model
-from sqlalchemy import Table, Column
 import dataclasses
 from datetime import date, datetime
 from typing import Callable
@@ -10,7 +9,6 @@ from core import CustomSchema
 from marshmallow.fields import Str, Date, Int, Nested, DateTime
 from marshmallow_enum import EnumField as MarshmallowEnum
 
-from sqlalchemy import ForeignKey
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
     AsyncEngine,
@@ -19,9 +17,6 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
-    Mapped,
-    mapped_column,
-    relationship,
 )
 
 
@@ -39,14 +34,6 @@ types_map = {
 reverse_types_map = {
     value: key for key, value in types_map.items()
 }
-
-
-registered_models = {}
-
-
-#def register_model(model_class):
-#    model_name = get_string_of_model(model_class)
-#    registered_models[model_name] = model_class
 
 
 def query_params_to_alchemy_filters(filters, query_param, value):
@@ -213,108 +200,6 @@ class MarshmallowToDataclass(type(CustomSchema)):
 
         result_model = make_dataclass(name, fields=result_fields, bases=(BaseDataclass,))
         return result_model
-
-
-class UserOrm(Base):
-    __tablename__ = 'users'
-
-    pk: Mapped[int] = mapped_column(primary_key=True)
-    first_name: Mapped[str]
-    last_name: Mapped[str]
-    birth_date: Mapped[date]
-    messages: Mapped['MessageOrm'] = relationship(back_populates='created_by')
-
-    city_id: Mapped[int] = mapped_column(
-        ForeignKey('cities.pk'), nullable=True,
-    )
-    city: Mapped['CityOrm'] = relationship(back_populates='city_users')
-
-    language_id: Mapped[int] = mapped_column(
-        ForeignKey('languages.pk'), nullable=True,
-    )
-    language: Mapped['LanguageOrm'] = relationship(back_populates='language_users')
-
-    gender_id: Mapped[int] = mapped_column(
-        ForeignKey('genders.pk'), nullable=True,
-    )
-    gender: Mapped['GenderOrm'] = relationship(back_populates='gender_users')
-
-
-class CityOrm(Base):
-    __tablename__ = 'cities'
-
-    pk: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str]
-    country_id: Mapped[int] = mapped_column(ForeignKey('countries.pk'))
-    country: Mapped['CountryOrm'] = relationship(back_populates='cities')
-    city_users: Mapped[list['UserOrm']] = relationship(back_populates='city')
-
-
-class CountryOrm(Base):
-    __tablename__ = 'countries'
-
-    pk: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str]
-    cities: Mapped[list['CityOrm']] = relationship(back_populates='country')
-
-
-class LanguageOrm(Base):
-    __tablename__ = 'languages'
-
-    pk: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str]
-    language_users: Mapped[list['UserOrm']] = relationship(back_populates='language')
-
-
-class GenderOrm(Base):
-    __tablename__ = 'genders'
-
-    pk: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str]
-    gender_users: Mapped[list['UserOrm']] = relationship(back_populates='gender')
-
-
-class ChatType(enum.Enum):
-    DIRECT = 'direct'
-    GROUP = 'group'
-    SELF = 'self'
-
-
-class ChatOrm(Base):
-    __tablename__ = 'chats'
-
-    pk: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(nullable=True)
-    chat_type: Mapped[ChatType] = mapped_column(default=ChatType.DIRECT)
-
-    last_message_id: Mapped[int] = mapped_column(ForeignKey('users.pk'), nullable=True)
-    last_message: Mapped['MessageOrm'] = relationship(back_populates='last_message_in_chat')
-    messages: Mapped[list['MessageOrm']] = relationship(back_populates='chat')
-
-    participants: Mapped[list[UserOrm]] = relationship(secondary=Table(
-        "chats_to_users",
-        Base.metadata,
-        Column("chat_id", ForeignKey("chats.pk")),
-        Column("user_id", ForeignKey("users.pk")),
-    ))
-
-
-class MessageOrm(Base):
-    __tablename__ = 'messages'
-
-    pk: Mapped[int] = mapped_column(primary_key=True)
-    text: Mapped[str]
-    date_time: Mapped[datetime] = mapped_column(default=datetime.now)
-
-    created_by_id: Mapped[int] = mapped_column(ForeignKey('users.pk'))
-    created_by: Mapped['UserOrm'] = relationship(back_populates='messages')
-
-    chat_id: Mapped[int] = mapped_column(ForeignKey('chats.pk'))
-    chat: Mapped['ChatOrm'] = relationship(back_populates='messages')
-    last_message_in_chat: Mapped['ChatOrm'] = relationship(back_populates='last_message')
-
-    reply_to_message_id: Mapped[int] = mapped_column(ForeignKey('messages.pk'), nullable=True)
-    reply_to_message: Mapped['MessageOrm'] = relationship(remote_side=[pk])
 
 
 class DataBase:
