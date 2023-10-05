@@ -113,6 +113,12 @@ chat_create_schema = ChatSchema(exclude=('last_message_id',), json_schema_name='
 @register_route(
     '/users/', ('get', ),
     response=user_list_get_schema,
+    query_params={
+        UserOrm: ['first_name', 'last_name'],
+        CityOrm: ['name'],
+        CountryOrm: ['name'],
+        GenderOrm: ['name'],
+    }
 )
 async def get_users(query_params) -> str:
     async with db.create_session() as session:
@@ -271,7 +277,7 @@ async def handle_request(
     else:
         if 'query_params' in list(dict(signature(controller).parameters).keys()):
             key, value = list(query_params.items())[0]
-            response: str = await controller(query_params=query_params_to_alchemy_filters(key, value))
+            response: str = await controller(query_params=query_params_to_alchemy_filters(controller.query_params, key, value))
         else:
             response: str = await controller()
 

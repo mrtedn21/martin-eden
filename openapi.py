@@ -1,5 +1,7 @@
 import json
+from utils import get_string_of_model
 from core import CustomSchema, CustomJsonSchema
+from datetime import date, datetime
 
 from marshmallow import Schema
 
@@ -9,6 +11,13 @@ with open('example.json') as file:
     openapi_object = json.load(file)
 
 defined_marshmallow_schemas = {}
+
+type_map_to_string = {
+    str: 'string',
+    int: 'integer',
+    datetime: 'string',
+    date: 'string',
+}
 
 
 def dict_set(dct: dict, path: str, value):
@@ -86,8 +95,31 @@ def set_request_for_openapi_method(
         request_schema['$ref'] = schema_path
 
 
+def set_query_params(openapi_method: dict, query_params: dict) -> None:
+    if not query_params:
+        return
+
+    parameters = openapi_method.setdefault('parameters', [])
+    for model_obj, fields in query_params.items():
+        for field in fields:
+            param_type = type_map_to_string[
+                getattr(model_obj, field).type.python_type
+            ]
+            model_name = get_string_of_model(model_obj)
+            if param_type == 'string':
+                method_name = 'like'
+            else:
+                method_name = 'in'
+
+            parameters.append({
+                'name': f'{model_name}__{field}__{method_name}',
+                'in': 'query',
+                'schema': {'type': param_type},
+            })
+
+
 def add_openapi_path(
-    path: str, method: str, request: Schema = None, response: Schema = None,
+    path: str, method: str, request: Schema = None, response: Schema = None, query_params: dict = None,
 ):
     # in the framework /schema/ is used for openapi, therefore no need
     # create openapi description of method that create openapi schema
@@ -110,3 +142,5 @@ def add_openapi_path(
 
     register_marshmallow_schema(request)
     set_request_for_openapi_method(openapi_new_method, request)
+
+    set_query_params(openapi_new_method, query_params)

@@ -14,11 +14,12 @@ def _register_route(
     controller: Callable,
     request: Schema = None,
     response: Schema = None,
+    query_params: dict = None,
 ) -> None:
     new_path = routes.setdefault(path, {})
     for method in methods:
         new_path[method.upper()] = controller
-        add_openapi_path(path, method, request, response)
+        add_openapi_path(path, method, request, response, query_params)
 
 
 def get_controller(path: str, method: str):
@@ -27,7 +28,7 @@ def get_controller(path: str, method: str):
     return controller
 
 
-def register_route(path, methods, request=None, response=None):
+def register_route(path, methods, request=None, response=None, query_params=None):
     """This is decorator only, wrapping over _register_route."""
     def wrap(func):
         def wrapped_f(*args, **kwargs):
@@ -35,7 +36,8 @@ def register_route(path, methods, request=None, response=None):
 
         func.request = request
         func.response = response
-        _register_route(path, methods, func, request, response)
+        func.query_params = query_params
+        _register_route(path, methods, func, request, response, query_params)
         return wrapped_f
 
     return wrap

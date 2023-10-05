@@ -1,4 +1,5 @@
 import enum
+from utils import get_string_of_model
 from sqlalchemy import Table, Column
 import dataclasses
 from datetime import date, datetime
@@ -43,19 +44,23 @@ reverse_types_map = {
 registered_models = {}
 
 
-def register_model(model_class):
-    model_name = model_class.__name__
-    # remove "Orm" postfix from model name
-    model_name = model_name[:-3]
-    model_name = model_name.lower()
-    registered_models[model_name] = model_class
+#def register_model(model_class):
+#    model_name = get_string_of_model(model_class)
+#    registered_models[model_name] = model_class
 
 
-def query_params_to_alchemy_filters(query_param, value):
+def query_params_to_alchemy_filters(filters, query_param, value):
     """Example of query_param:
         user__first_name__like=martin"""
     model_name, field_name, method_name = query_param.split('__')
-    model_class = registered_models[model_name]
+
+    model_class = None
+    for model_class_iter in filters.keys():
+        if get_string_of_model(model_class_iter) == model_name:
+            model_class = model_class_iter
+    if not model_class:
+        return None
+
     field_obj = getattr(model_class, field_name)
     method_obj = getattr(field_obj, method_name)
     if method_name == 'like':
@@ -84,7 +89,7 @@ class SqlAlchemyToMarshmallow(type(Base)):
 
     def __new__(cls, name, bases, fields):
         origin_model = bases[0]
-        register_model(origin_model)
+        #register_model(origin_model)
 
         # alchemy_fields variable needs to exclude these
         # properties from origin_model_field_names
