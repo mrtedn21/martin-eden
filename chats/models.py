@@ -9,8 +9,6 @@ from sqlalchemy.orm import (
     mapped_column,
     relationship,
 )
-# !!!!!!!!!!!!!!!!!!!!!! Интересно надо ли удалить или и так заведется
-from users.models import UserOrm
 
 
 class ChatType(enum.Enum):

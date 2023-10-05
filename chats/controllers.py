@@ -2,8 +2,8 @@ from operator import itemgetter
 
 from sqlalchemy import select
 
+from users.models import UserOrm
 from chats.models import (
-    UserOrm,
     MessageOrm,
     ChatOrm,
 )
