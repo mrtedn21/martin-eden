@@ -2,6 +2,14 @@
 # GET /some/path HTTP/1.1
 # Host: localhost:8001
 # Connection: keep-alive
+from typing import Optional
+from enum import Enum
+
+
+class HttpMethod(Enum):
+    OPTIONS = 'OPTIONS'
+    POST = 'POST'
+    GET = 'GET'
 
 
 class HttpHeadersParser:
@@ -9,6 +17,11 @@ class HttpHeadersParser:
         self.message: str = message
         self._detect_line_break_char()
         self.lines_of_header: list[str] = message.split(self.line_break_char)
+
+        self.method_name: str = self._get_method_name()
+        self.path: str = self._get_path()
+        self.query_params: Optional[str] = self._get_query_params()
+        self.body: str = self._get_body()
 
     def _detect_line_break_char(self):
         self.line_break_char: str = '\r'
@@ -18,8 +31,8 @@ class HttpHeadersParser:
         elif '\n' in self.message:
             self.line_break_char = '\n'
 
-    def get_method_name(self) -> str:
-        # Method name is first word of first line
+    def _get_method_name(self) -> str:
+        """Method name is first word of first line"""
         first_line = self.lines_of_header[0]
         first_word = first_line.split(' ')[0]
         return first_word
@@ -29,11 +42,12 @@ class HttpHeadersParser:
         second_word = first_line.split(' ')[1]
         return second_word.split('?')
 
-    def get_path(self):
+    def _get_path(self):
+        """Path is second name in first line"""
         url_parts = self._get_path_and_query_params()
         return url_parts[0]
 
-    def get_query_params(self):
+    def _get_query_params(self):
         url_parts = self._get_path_and_query_params()
         if len(url_parts) == 1:
             return
@@ -44,16 +58,17 @@ class HttpHeadersParser:
             query_params[key] = value
         return query_params
 
-    def get_body(self):
+    def _get_body(self):
+        """Body of http message starts after two line break characters"""
         position_of_body_starts = (
-                self.message.find(self.line_break_char * 2) +
-                len(self.line_break_char * 2)
+            self.message.find(self.line_break_char * 2) +
+            len(self.line_break_char * 2)
         )
         return self.message[position_of_body_starts:]
 
 
 def create_response_headers(
-    status: int, content_type: str, for_options: bool = False,
+    status: int, content_type: Optional[str] = None, for_options: bool = False,
 ):
     """Status is number, 200 or 404
     content_type examples is:
@@ -61,14 +76,17 @@ def create_response_headers(
     * text/html.
     """
     allow_methods = 'Allow: OPTIONS, GET, POST\n'
+    if content_type:
+        content_type = f'Content-Type: {content_type};charset=UTF-8\n'
 
     return (
         f'HTTP/1.0 {status}\n'
-        f'Access-Control-Allow-Origin: *\n'
+        'Access-Control-Allow-Origin: *\n'
         'Access-Control-Allow-Methods: POST, GET, OPTIONS\n'
         'Access-Control-Allow-Headers: origin, content-type, accept\n'
         'Access-Control-Allow-Credentials: true\n'
         'Access-Control-Max-Age: 86400\n'
         f'{allow_methods if for_options else ""}'
-        f'Content-Type: {content_type};charset=UTF-8\n\n'
+        f'{content_type if content_type else ""}'
+        f'\n'
     )
