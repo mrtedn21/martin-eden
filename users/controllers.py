@@ -19,7 +19,7 @@ db = DataBase()
 
 @register_route(
     '/users/', ('get', ),
-    response=user_list_get_schema,
+    response_schema=user_list_get_schema,
     query_params={
         UserOrm: ['first_name', 'last_name'],
         CityOrm: ['name'],
@@ -43,8 +43,8 @@ async def get_users(query_params) -> str:
 
 @register_route(
     '/users/', ('post', ),
-    request=user_create_schema,
-    response=user_get_schema,
+    request_schema=user_create_schema,
+    response_schema=user_get_schema,
 )
 async def create_user(new_user: User) -> User:
     async with db.create_session() as session:

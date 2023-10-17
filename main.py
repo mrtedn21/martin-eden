@@ -1,10 +1,12 @@
 from chats import controllers
 from users import controllers
 
-from typing import Optional
+from core import ControllerDefinitionError
+from typing import Optional, Any
+from core import Controller
 import asyncio
 from inspect import signature
-from dacite import from_dict
+from dacite import from_dict as dataclass_from_dict
 import dataclasses
 import json
 import socket
@@ -46,15 +48,7 @@ class App:
         http_parser = HttpHeadersParser(message)
 
         if http_parser.method_name == HttpMethod.OPTIONS:
-            headers = create_response_headers(
-                200, content_type='application/json', for_options=True,
-            )
-            await self.event_loop.sock_sendall(
-                client_socket,
-                (headers + 'HTTP/1.1 204 No Content\nAllow: OPTIONS, GET, POST').encode('utf8'),
-            )
-            client_socket.close()
-            return
+            return await self._send_response_for_options_method(client_socket)
 
         try:
             controller = get_controller(http_parser.path, http_parser.method_name)
@@ -62,23 +56,8 @@ class App:
             # temp decision for not existing paths
             return
 
-        if http_parser.method_name == 'POST':
-            types = controller.__annotations__
-            controller_schema = controller.request
-
-            parsed_dict = controller_schema.loads(http_parser.body)
-
-            for arg_name, arg_type in types.items():
-                if dataclasses.is_dataclass(arg_type):
-                    response = await controller(**{arg_name: from_dict(arg_type, parsed_dict)})
-                    if dataclasses.is_dataclass(response):
-                        response = dataclasses.asdict(response)
-                    if isinstance(response, dict):
-                        try:
-                            response = controller_schema.dumps(response)
-                        except TypeError:
-                            response = json.dumps(response)
-                    break
+        if http_parser.method_name == HttpMethod.POST:
+            response = await self._get_response_for_post_method(controller, http_parser.body)
         else:
             if 'query_params' in list(dict(signature(controller).parameters).keys()):
                 key, value = list(http_parser.query_params.items())[0]
@@ -102,6 +81,51 @@ class App:
         data = await self.event_loop.sock_recv(client_socket, 1024)
         message = data.decode()
         return message
+
+    async def _send_response_for_options_method(self, client_socket: socket.socket) -> None:
+        headers: str = create_response_headers(200, for_options=True)
+        await self.event_loop.sock_sendall(
+            client_socket,
+            headers.encode('utf8'),
+        )
+        client_socket.close()
+
+    async def _get_response_for_post_method(
+        self, controller: Controller, http_body: str,
+    ) -> str:
+        request_data = controller.request_schema.loads(http_body)
+        dataclass_name, dataclass_object = (
+            self._get_dataclass_from_argument_for_post_method(controller)
+        )
+
+        response = await controller(**{
+            dataclass_name: dataclass_from_dict(dataclass_object, request_data)
+        })
+        response = self._response_of_controller_to_str(controller, response)
+        return response
+
+    @staticmethod
+    def _response_of_controller_to_str(controller: Controller, response: Any) -> str:
+        if dataclasses.is_dataclass(response):
+            response = dataclasses.asdict(response)
+        if isinstance(response, dict):
+            try:
+                response = controller.response_schema.dumps(response)
+            except TypeError:
+                response = json.dumps(response)
+        return response
+
+    @staticmethod
+    def _get_dataclass_from_argument_for_post_method(controller: Controller) -> tuple:
+        controller_annotations = controller.__annotations__.copy()
+        controller_annotations.pop('return', None)
+        dataclass_name, dataclass_object = controller_annotations.popitem()
+        if any((
+            len(controller_annotations) > 0,
+            not dataclasses.is_dataclass(dataclass_object),
+        )):
+            raise ControllerDefinitionError('in post controller only one argument can be defined - dataclass')
+        return dataclass_name, dataclass_object
 
     async def main(self):
         """The method listen server socket for connections,if connection

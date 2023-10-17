@@ -1,33 +1,22 @@
-import datetime
-import decimal
-import uuid
-from enum import Enum
-from inspect import isclass
-import typing
-from marshmallow_jsonschema.base import _resolve_additional_properties
+from typing import Any
 
-from marshmallow import fields, missing, Schema, validate
-from marshmallow.class_registry import get_class
+from marshmallow import Schema
 from marshmallow.decorators import post_dump
-from marshmallow.utils import _Missing
-
-from marshmallow import INCLUDE, EXCLUDE, RAISE
-
-try:
-    from marshmallow_union import Union
-
-    ALLOW_UNIONS = True
-except ImportError:
-    ALLOW_UNIONS = False
-
-try:
-    from marshmallow_enum import EnumField, LoadDumpOptions
-
-    ALLOW_ENUMS = True
-except ImportError:
-    ALLOW_ENUMS = False
-
 from marshmallow_jsonschema import JSONSchema
+
+
+class ControllerDefinitionError(Exception):
+    pass
+
+
+class Controller:
+    """The class needs only as type hint"""
+    request_schema: Schema
+    response_schema: Schema
+    query_params: dict
+
+    def __call__(self, *args, **kwargs):
+        pass
 
 
 class CustomSchema(Schema):
@@ -39,7 +28,7 @@ class CustomSchema(Schema):
 
 class CustomJsonSchema(JSONSchema):
     @post_dump
-    def wrap(self, data, **_) -> typing.Dict[str, typing.Any]:
+    def wrap(self, data, **_) -> dict[str, Any]:
         """Wrap this with the root schema definitions."""
         if self.nested:  # no need to wrap, will be in outer defs
             return data

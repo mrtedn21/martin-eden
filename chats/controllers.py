@@ -19,7 +19,7 @@ db = DataBase()
 
 @register_route(
     '/messages/', ('get', ),
-    response=message_get_schema,
+    response_schema=message_get_schema,
 )
 async def get_messages() -> list[Message]:
     async with db.create_session() as session:
@@ -37,8 +37,8 @@ async def get_messages() -> list[Message]:
 
 @register_route(
     '/messages/', ('post',),
-    request=message_create_schema,
-    response=message_create_schema,
+    request_schema=message_create_schema,
+    response_schema=message_create_schema,
 )
 async def create_message(new_message: Message) -> Message:
     async with db.create_session() as session:
@@ -56,7 +56,7 @@ async def create_message(new_message: Message) -> Message:
 
 @register_route(
     '/chats/', ('get', ),
-    response=chat_get_schema,
+    response_schema=chat_get_schema,
 )
 async def get_chats() -> list[Chat]:
     async with db.create_session() as session:
@@ -68,8 +68,8 @@ async def get_chats() -> list[Chat]:
 
 @register_route(
     '/chats/', ('post',),
-    request=chat_create_schema,
-    response=chat_create_schema,
+    request_schema=chat_create_schema,
+    response_schema=chat_create_schema,
 )
 async def create_chat(new_chat: Chat) -> Chat:
     async with db.create_session() as session:

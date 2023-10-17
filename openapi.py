@@ -119,7 +119,7 @@ def set_query_params(openapi_method: dict, query_params: dict) -> None:
 
 
 def add_openapi_path(
-    path: str, method: str, request: Schema = None, response: Schema = None, query_params: dict = None,
+    path: str, method: str, request_schema: Schema = None, response_schema: Schema = None, query_params: dict = None,
 ):
     # in the framework /schema/ is used for openapi, therefore no need
     # create openapi description of method that create openapi schema
@@ -137,10 +137,10 @@ def add_openapi_path(
         path.replace('/', '') + '_' + method.lower()
     )
 
-    register_marshmallow_schema(response)
-    set_response_for_openapi_method(openapi_new_method, response)
+    register_marshmallow_schema(response_schema)
+    set_response_for_openapi_method(openapi_new_method, response_schema)
 
-    register_marshmallow_schema(request)
-    set_request_for_openapi_method(openapi_new_method, request)
+    register_marshmallow_schema(request_schema)
+    set_request_for_openapi_method(openapi_new_method, request_schema)
 
     set_query_params(openapi_new_method, query_params)

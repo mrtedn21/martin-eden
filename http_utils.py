@@ -3,10 +3,9 @@
 # Host: localhost:8001
 # Connection: keep-alive
 from typing import Optional
-from enum import Enum
 
 
-class HttpMethod(Enum):
+class HttpMethod:
     OPTIONS = 'OPTIONS'
     POST = 'POST'
     GET = 'GET'
@@ -69,7 +68,7 @@ class HttpHeadersParser:
 
 def create_response_headers(
     status: int, content_type: Optional[str] = None, for_options: bool = False,
-):
+) -> str:
     """Status is number, 200 or 404
     content_type examples is:
     * application/json
