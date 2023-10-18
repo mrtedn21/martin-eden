@@ -1,13 +1,6 @@
-from chats.models import (
-    MessageOrm,
-    ChatOrm,
-)
-from database import (
-    DataBase,
-    SqlAlchemyToMarshmallow,
-)
+from chats.models import ChatOrm, MessageOrm
+from database import DataBase, SqlAlchemyToMarshmallow
 from users.schemas import UserSchema
-
 
 db = DataBase()
 

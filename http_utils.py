@@ -12,22 +12,22 @@ class HttpMethod:
 
 
 class HttpHeadersParser:
-    def __init__(self, message: str):
-        self.message: str = message
+    def __init__(self, http_message: str):
+        self.http_message: str = http_message
         self._detect_line_break_char()
-        self.lines_of_header: list[str] = message.split(self.line_break_char)
+        self.lines_of_header: list[str] = http_message.split(self.line_break_char)
 
         self.method_name: str = self._get_method_name()
         self.path: str = self._get_path()
-        self.query_params: Optional[str] = self._get_query_params()
+        self.query_params = self._get_query_params()
         self.body: str = self._get_body()
 
     def _detect_line_break_char(self):
         self.line_break_char: str = '\r'
 
-        if '\r\n' in self.message:
+        if '\r\n' in self.http_message:
             self.line_break_char = '\r\n'
-        elif '\n' in self.message:
+        elif '\n' in self.http_message:
             self.line_break_char = '\n'
 
     def _get_method_name(self) -> str:
@@ -46,7 +46,7 @@ class HttpHeadersParser:
         url_parts = self._get_path_and_query_params()
         return url_parts[0]
 
-    def _get_query_params(self):
+    def _get_query_params(self) -> Optional[dict]:
         url_parts = self._get_path_and_query_params()
         if len(url_parts) == 1:
             return
@@ -60,10 +60,10 @@ class HttpHeadersParser:
     def _get_body(self):
         """Body of http message starts after two line break characters"""
         position_of_body_starts = (
-            self.message.find(self.line_break_char * 2) +
+            self.http_message.find(self.line_break_char * 2) +
             len(self.line_break_char * 2)
         )
-        return self.message[position_of_body_starts:]
+        return self.http_message[position_of_body_starts:]
 
 
 def create_response_headers(

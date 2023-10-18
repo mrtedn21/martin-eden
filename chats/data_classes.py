@@ -1,5 +1,5 @@
-from database import MarshmallowToDataclass
 from chats.schemas import ChatSchema, MessageSchema
+from database import MarshmallowToDataclass
 from users.data_classes import User
 
 

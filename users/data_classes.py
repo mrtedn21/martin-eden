@@ -1,11 +1,6 @@
 from database import MarshmallowToDataclass
-from users.schemas import (
-    CountrySchema,
-    LanguageSchema,
-    GenderSchema,
-    CitySchema,
-    UserSchema,
-)
+from users.schemas import (CitySchema, CountrySchema, GenderSchema,
+                           LanguageSchema, UserSchema)
 
 
 class Country(CountrySchema, metaclass=MarshmallowToDataclass):

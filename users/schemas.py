@@ -1,12 +1,5 @@
-from users.models import (
-    CityOrm,
-    CountryOrm,
-    UserOrm,
-    GenderOrm,
-    LanguageOrm,
-)
-
 from database import SqlAlchemyToMarshmallow
+from users.models import CityOrm, CountryOrm, GenderOrm, LanguageOrm, UserOrm
 
 
 class CountrySchema(CountryOrm, metaclass=SqlAlchemyToMarshmallow):

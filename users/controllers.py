@@ -2,17 +2,12 @@ from operator import itemgetter
 
 from sqlalchemy import select
 
-from users.models import (
-    CityOrm,
-    CountryOrm,
-    UserOrm,
-    GenderOrm,
-    LanguageOrm,
-)
 from database import DataBase
 from routing import register_route
-from users.schemas import user_list_get_schema, user_create_schema, user_get_schema
 from users.data_classes import User
+from users.models import CityOrm, CountryOrm, GenderOrm, LanguageOrm, UserOrm
+from users.schemas import (user_create_schema, user_get_schema,
+                           user_list_get_schema)
 
 db = DataBase()
 

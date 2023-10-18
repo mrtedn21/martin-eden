@@ -2,17 +2,13 @@ from operator import itemgetter
 
 from sqlalchemy import select
 
-from users.models import UserOrm
-from chats.models import (
-    MessageOrm,
-    ChatOrm,
-)
-from chats.data_classes import Message, Chat
-from chats.schemas import message_get_schema, message_create_schema, chat_create_schema, chat_get_schema
-from database import (
-    DataBase,
-)
+from chats.data_classes import Chat, Message
+from chats.models import ChatOrm, MessageOrm
+from chats.schemas import (chat_create_schema, chat_get_schema,
+                           message_create_schema, message_get_schema)
+from database import DataBase
 from routing import register_route
+from users.models import UserOrm
 
 db = DataBase()
 

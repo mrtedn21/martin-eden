@@ -1,9 +1,10 @@
 import json
-from utils import get_string_of_model
-from core import CustomSchema, CustomJsonSchema
 from datetime import date, datetime
 
 from marshmallow import Schema
+
+from core import CustomJsonSchema, CustomSchema
+from utils import get_name_of_model
 
 SCHEMA_PATH_TEMPLATE = '#/components/schemas/{}'
 
@@ -105,7 +106,7 @@ def set_query_params(openapi_method: dict, query_params: dict) -> None:
             param_type = type_map_to_string[
                 getattr(model_obj, field).type.python_type
             ]
-            model_name = get_string_of_model(model_obj)
+            model_name = get_name_of_model(model_obj)
             if param_type == 'string':
                 method_name = 'like'
             else:

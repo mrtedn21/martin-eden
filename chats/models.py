@@ -1,14 +1,10 @@
 import enum
-from database import Base
-from sqlalchemy import Table, Column
 from datetime import datetime
 
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import (
-    Mapped,
-    mapped_column,
-    relationship,
-)
+from sqlalchemy import Column, ForeignKey, Table
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from database import Base
 
 
 class ChatType(enum.Enum):

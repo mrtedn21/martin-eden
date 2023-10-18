@@ -5,10 +5,6 @@ from marshmallow.decorators import post_dump
 from marshmallow_jsonschema import JSONSchema
 
 
-class ControllerDefinitionError(Exception):
-    pass
-
-
 class Controller:
     """The class needs only as type hint"""
     request_schema: Schema

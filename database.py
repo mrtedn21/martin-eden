@@ -1,23 +1,17 @@
-import enum
-from utils import get_string_of_model
 import dataclasses
+import enum
+from dataclasses import field, make_dataclass
 from datetime import date, datetime
 from typing import Callable
-from dataclasses import make_dataclass, field
-from core import CustomSchema
 
-from marshmallow.fields import Str, Date, Int, Nested, DateTime
+from marshmallow.fields import Date, DateTime, Int, Nested, Str
 from marshmallow_enum import EnumField as MarshmallowEnum
+from sqlalchemy.ext.asyncio import (AsyncAttrs, AsyncEngine,
+                                    async_sessionmaker, create_async_engine)
+from sqlalchemy.orm import DeclarativeBase
 
-from sqlalchemy.ext.asyncio import (
-    AsyncAttrs,
-    AsyncEngine,
-    async_sessionmaker,
-    create_async_engine,
-)
-from sqlalchemy.orm import (
-    DeclarativeBase,
-)
+from core import CustomSchema
+from utils import get_name_of_model
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -43,7 +37,7 @@ def query_params_to_alchemy_filters(filters, query_param, value):
 
     model_class = None
     for model_class_iter in filters.keys():
-        if get_string_of_model(model_class_iter) == model_name:
+        if get_name_of_model(model_class_iter) == model_name:
             model_class = model_class_iter
     if not model_class:
         return None

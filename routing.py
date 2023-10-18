@@ -1,18 +1,27 @@
-from typing import Callable, Iterable
-from core import Controller
+from typing import Iterable
 
-from openapi import add_openapi_path
 from marshmallow import Schema
 
-DictOfRoutes = dict[str, dict[str, Callable]]
+from core import Controller
+from openapi import add_openapi_path
+
+DictOfRoutes = dict[str, dict[str, Controller]]
 
 routes: DictOfRoutes = {}
+
+
+class ControllerDefinitionError(Exception):
+    pass
+
+
+class FindControllerError(Exception):
+    pass
 
 
 def _register_route(
     path: str,
     methods: Iterable[str],
-    controller: Callable,
+    controller: Controller,
     request_schema: Schema = None,
     response_schema: Schema = None,
     query_params: dict = None,
@@ -24,8 +33,15 @@ def _register_route(
 
 
 def get_controller(path: str, method: str) -> Controller:
-    methods = routes[path]
-    controller = methods[method.upper()]
+    try:
+        methods = routes[path]
+        controller = methods[method.upper()]
+    except KeyError:
+        # Temp decision for not existing paths
+        # In future must return 404 not found
+        raise FindControllerError(
+            f'Controller not found with path: {path} and method: {method}'
+        )
     return controller
 
 
