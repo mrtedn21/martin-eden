@@ -133,7 +133,7 @@ class HttpRequestHandler:
         return dataclass_name, dataclass_object
 
 
-class App:
+class Backend:
     def __init__(self):
         self.event_loop: Optional[AbstractEventLoop] = None
         self.server_socket: Optional[socket.socket] = None
@@ -175,5 +175,5 @@ class App:
 
 if __name__ == '__main__':
     # uvloop.install()
-    app = App()
+    app = Backend()
     asyncio.run(app.main(), debug=True)

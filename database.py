@@ -11,7 +11,9 @@ from sqlalchemy.ext.asyncio import (AsyncAttrs, AsyncEngine,
 from sqlalchemy.orm import DeclarativeBase
 
 from core import CustomSchema
-from utils import get_name_of_model
+from utils import (get_name_of_model, get_python_field_type_from_alchemy_field,
+                   is_enum_alchemy_field, is_property_secondary_relation,
+                   is_simple_alchemy_field, is_special_alchemy_field)
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -25,7 +27,7 @@ types_map = {
     datetime: DateTime,
 }
 
-reverse_types_map = {
+inverse_types_map = {
     value: key for key, value in types_map.items()
 }
 
@@ -51,111 +53,46 @@ def query_params_to_alchemy_filters(filters, query_param, value):
 
 
 class SqlAlchemyToMarshmallow(type(Base)):
-    """Metaclass that get sql alchemy model fields, creates marshmallow
-    schemas based on them and moreover, metaclass extends schemas of
-    openapi object with models it creates.
-
-    Example:
-    -------
-    class NewModel(SomeSqlAlchemyModel, metaclass=SqlAlchemyToPydantic):
-        fields = '__all__'
-
-    fields attribute can be on of:
-
-    * '__all__' - means that marshmallow schema will be with all
-        fields of alchemy model
-    * '__without_pk__' - means will be all fields instead of pk
-    * tuple[str] - is tuple of fields that will be used
-    """
+    """Metaclass get sql alchemy model, creates marshmallow
+    schema based on it"""
 
     def __new__(cls, name, bases, fields):
-        origin_model = bases[0]
-        #register_model(origin_model)
+        origin_model: Base = bases[0]
 
-        # alchemy_fields variable needs to exclude these
-        # properties from origin_model_field_names
-        alchemy_fields = ('registry', 'metadata', 'awaitable_attrs')
-        # In addition, I filter from secondary relations, because it is
-        # harmful in future marshmallow schemas
         origin_model_field_names = [
             field_name for field_name in dir(origin_model)
-            if not field_name.startswith('_')
-            and field_name not in alchemy_fields
-            and not cls.is_property_secondary_relation(origin_model, field_name)
-            #and not cls.is_property_foreign_key(origin_model, field_name)
+            if not all((
+                field_name.startswith('_'),
+                is_special_alchemy_field(field_name),
+                is_property_secondary_relation(origin_model, field_name),
+            ))
         ]
 
-        # Create simple fields, of type int, str, etc.
-        result_fields = {
-            field_name: types_map[getattr(origin_model, field_name).type.python_type](required=False)
-            for field_name in origin_model_field_names
-            # if alchemy field has 'type' property,
-            # it means the field is simple, int, str, etc.
-            if hasattr(getattr(origin_model, field_name), 'type')
-            if not issubclass(getattr(origin_model, field_name).type.python_type, enum.Enum)
-        }
-
-        # For enums
-        result_fields.update({
-            field_name: MarshmallowEnum(getattr(origin_model, field_name).type.python_type, required=False)
-            for field_name in origin_model_field_names
-            # if alchemy field has 'type' property,
-            # it means the field is simple, int, str, etc.
-            if hasattr(getattr(origin_model, field_name), 'type')
-            if issubclass(getattr(origin_model, field_name).type.python_type, enum.Enum)
-        })
-
-        # Create complex fields, of marshmallow schemas,
-        # for creating nested marshmallow schemas
+        result_fields = {}
         for field_name in origin_model_field_names:
-            if (field_name in origin_model_field_names
-                and fields.get(field_name)
-                and not hasattr(getattr(origin_model, field_name), 'type')
-            ):
-                result_fields[field_name] = Nested(fields[field_name], required=False)
+            # add simple fields: int, str, etc.
+            if is_simple_alchemy_field(origin_model, field_name):
+                python_field_type = get_python_field_type_from_alchemy_field(
+                    origin_model, field_name,
+                )
+
+                if is_enum_alchemy_field(origin_model, field_name):
+                    result_fields[field_name] = MarshmallowEnum(
+                        python_field_type, required=False,
+                    )
+                else:
+                    result_fields[field_name] = (
+                        types_map[python_field_type](required=False)
+                    )
+            else:
+                # add nested fields
+                if fields.get(field_name):
+                    result_fields[field_name] = Nested(
+                        fields[field_name], required=False,
+                    )
 
         result_model = CustomSchema.from_dict(result_fields, name=name)
         return result_model
-
-    @staticmethod
-    def is_property_secondary_relation(model, attribute_name):
-        """Sqlalchemy in its models force define one relation in two models.
-        What means. For example will take model order and model product.
-        Every order may have one product. In database, in sql when we create
-        table product, we don't write that it relates to order, only in table
-        order we create product_id and create foreign key, that references
-        to product table. In this case reference from order to product
-        is primary relation. Nevertheless, one product can reference to
-        multiple orders, but it is not marked in database schema,
-        therefore I say that it is secondary relation
-
-        And this function separate primary relation in model from secondary.
-        The function return True only if attribute from attribute_name
-        argument is secondary relationship."""
-        attribute = getattr(model, attribute_name)
-
-        try:
-            collection_class = attribute.prop.collection_class
-        except AttributeError:
-            return False
-
-        if collection_class is not None:
-            return True
-        else:
-            return False
-
-    @staticmethod
-    def is_property_foreign_key(model, attribute_name):
-        attribute = getattr(model, attribute_name)
-        try:
-            foreign_keys = attribute.foreign_keys
-        except AttributeError:
-            return False
-
-        if foreign_keys:
-            return True
-        else:
-            return False
 
 
 class MarshmallowToDataclass(type(CustomSchema)):
@@ -166,7 +103,7 @@ class MarshmallowToDataclass(type(CustomSchema)):
 
         # Create simple fields, of type int, str, etc.
         result_fields = [
-            (field_name, reverse_types_map[type(field_type)], field(default=None))
+            (field_name, inverse_types_map[type(field_type)], field(default=None))
             for field_name, field_type in origin_model_fields.items()
             if not isinstance(field_type, Nested)
             and not hasattr(field_type, 'enum')
