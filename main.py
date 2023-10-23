@@ -7,13 +7,13 @@ from typing import Any, Optional
 
 from dacite import from_dict as dataclass_from_dict
 
-from chats import controllers
+from chats import controllers as chat_controllers  # noqa: F401
 from core import Controller
 from database import DataBase, query_params_to_alchemy_filters
 from http_utils import HttpHeadersParser, HttpMethod, create_response_headers
 from openapi import openapi_object, write_pydantic_models_to_openapi
 from routing import ControllerDefinitionError, get_controller, register_route
-from users import controllers
+from users import controllers as user_controllers  # noqa: F401
 from utils import get_argument_names
 
 db = DataBase()

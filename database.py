@@ -1,5 +1,4 @@
 import dataclasses
-import enum
 from dataclasses import field, make_dataclass
 from datetime import date, datetime
 from typing import Callable
@@ -61,7 +60,7 @@ class SqlAlchemyToMarshmallow(type(Base)):
 
         origin_model_field_names = [
             field_name for field_name in dir(origin_model)
-            if not all((
+            if not any((
                 field_name.startswith('_'),
                 is_special_alchemy_field(field_name),
                 is_property_secondary_relation(origin_model, field_name),
@@ -95,42 +94,39 @@ class SqlAlchemyToMarshmallow(type(Base)):
         return result_model
 
 
+@dataclasses.dataclass
+class BaseDataclass:
+    pass
+
+
 class MarshmallowToDataclass(type(CustomSchema)):
     def __new__(cls, name, bases, fields):
         origin_schema_class = bases[0]
         origin_schema = origin_schema_class()
         origin_model_fields = origin_schema.fields
 
-        # Create simple fields, of type int, str, etc.
-        result_fields = [
-            (field_name, inverse_types_map[type(field_type)], field(default=None))
-            for field_name, field_type in origin_model_fields.items()
-            if not isinstance(field_type, Nested)
-            and not hasattr(field_type, 'enum')
-        ]
-
-        # for enums
-        result_fields.extend([
-            (field_name, field_type.enum, field(default=None))
-            for field_name, field_type in origin_model_fields.items()
-            if not isinstance(field_type, Nested)
-            and hasattr(field_type, 'enum')
-        ])
-
-        # Create complex fields, of marshmallow schemas,
-        # for creating nested marshmallow schemas
+        result_fields = []
         for field_name, field_type in origin_model_fields.items():
             if isinstance(field_type, Nested):
-                result_fields.append(
-                    (field_name, fields['__annotations__'][field_name], field(default=None))
+                new_type_for_dataclass = (
+                    fields['__annotations__'][field_name]
                 )
+            else:
+                if hasattr(field_type, 'enum'):
+                    new_type_for_dataclass = field_type.enum
+                else:
+                    new_type_for_dataclass = (
+                        inverse_types_map[type(field_type)]
+                    )
 
-        @dataclasses.dataclass
-        class BaseDataclass:
-            pass
+            result_fields.append((
+                field_name, new_type_for_dataclass, field(default=None),
+            ))
 
-        result_model = make_dataclass(name, fields=result_fields, bases=(BaseDataclass,))
-        return result_model
+        result_dataclass = make_dataclass(
+            name, fields=result_fields, bases=(BaseDataclass,),
+        )
+        return result_dataclass
 
 
 class DataBase:
