@@ -3,7 +3,7 @@ from typing import Iterable
 from marshmallow import Schema
 
 from core import Controller
-from openapi import add_openapi_path
+from openapi import OpenApiBuilder
 
 DictOfRoutes = dict[str, dict[str, Controller]]
 
@@ -29,7 +29,9 @@ def _register_route(
     new_path = routes.setdefault(path, {})
     for method in methods:
         new_path[method.upper()] = controller
-        add_openapi_path(path, method, request_schema, response_schema, query_params)
+        OpenApiBuilder().add_openapi_path(
+            path, method, request_schema, response_schema, query_params,
+        )
 
 
 def get_controller(path: str, method: str) -> Controller:

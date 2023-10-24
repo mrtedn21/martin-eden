@@ -79,3 +79,15 @@ def is_property_foreign_key(model, attribute_name):
         return True
     else:
         return False
+
+
+def dict_set(dct: dict, path: str, value):
+    keys = path.split('.')
+    keys_except_last = keys[:-1]
+    last_key = keys[-1]
+
+    for key in keys_except_last:
+        dct = dct.setdefault(key, {})
+
+    dct[last_key] = value
+    return dct[last_key]

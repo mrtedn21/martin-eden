@@ -11,7 +11,7 @@ from chats import controllers as chat_controllers  # noqa: F401
 from core import Controller
 from database import DataBase, query_params_to_alchemy_filters
 from http_utils import HttpHeadersParser, HttpMethod, create_response_headers
-from openapi import openapi_object, write_pydantic_models_to_openapi
+from openapi import OpenApiBuilder
 from routing import ControllerDefinitionError, get_controller, register_route
 from users import controllers as user_controllers  # noqa: F401
 from utils import get_argument_names
@@ -138,7 +138,7 @@ class Backend:
         self.event_loop: Optional[AbstractEventLoop] = None
         self.server_socket: Optional[socket.socket] = None
         self._configure_sockets()
-        write_pydantic_models_to_openapi()
+        OpenApiBuilder().write_marshmallow_schemas_to_openapi_doc()
 
     def _configure_sockets(self):
         self.server_socket = socket.socket(
