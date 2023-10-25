@@ -91,3 +91,7 @@ def dict_set(dct: dict, path: str, value):
 
     dct[last_key] = value
     return dct[last_key]
+
+
+def get_operation_id_for_openapi(path: str, method: str) -> str:
+    return path.replace('/', '') + '_' + method.lower()

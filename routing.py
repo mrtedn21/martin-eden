@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from marshmallow import Schema
+from core import CustomSchema
 
 from core import Controller
 from openapi import OpenApiBuilder
@@ -22,8 +22,8 @@ def _register_route(
     path: str,
     methods: Iterable[str],
     controller: Controller,
-    request_schema: Schema = None,
-    response_schema: Schema = None,
+    request_schema: CustomSchema = None,
+    response_schema: CustomSchema = None,
     query_params: dict = None,
 ) -> None:
     new_path = routes.setdefault(path, {})

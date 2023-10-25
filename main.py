@@ -21,7 +21,7 @@ db = DataBase()
 
 @register_route('/schema/', ('get', ))
 async def get_openapi_schema() -> str:
-    return json.dumps(openapi_object)
+    return json.dumps(OpenApiBuilder().openapi_object)
 
 
 class HttpRequestHandler:
@@ -175,5 +175,5 @@ class Backend:
 
 if __name__ == '__main__':
     # uvloop.install()
-    app = Backend()
-    asyncio.run(app.main(), debug=True)
+    backend = Backend()
+    asyncio.run(backend.main(), debug=True)

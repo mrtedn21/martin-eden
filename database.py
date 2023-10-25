@@ -69,12 +69,11 @@ class SqlAlchemyToMarshmallow(type(Base)):
 
         result_fields = {}
         for field_name in origin_model_field_names:
-            # add simple fields: int, str, etc.
+            # add simple fields: int, str, date, datetime, etc.
             if is_simple_alchemy_field(origin_model, field_name):
                 python_field_type = get_python_field_type_from_alchemy_field(
                     origin_model, field_name,
                 )
-
                 if is_enum_alchemy_field(origin_model, field_name):
                     result_fields[field_name] = MarshmallowEnum(
                         python_field_type, required=False,

@@ -1,8 +1,7 @@
 import json
 from datetime import date, datetime
 
-from marshmallow import Schema
-
+from utils import get_python_field_type_from_alchemy_field, get_operation_id_for_openapi
 from core import CustomJsonSchema, CustomSchema
 from utils import get_name_of_model, dict_set
 
@@ -20,22 +19,11 @@ class OpenApiBuilder:
                 cls.openapi_object = json.load(file)
         return cls._instance
 
-    @staticmethod
-    def python_type_to_string_map(python_type):
-        mapping = {
-            str: 'string',
-            int: 'integer',
-            datetime: 'string',
-            date: 'string',
-        }
-        return mapping[python_type]
-
     def register_marshmallow_schema(self, schema: CustomSchema):
         """Register schemas for openapi doc - using concrete
         instance of marshmallow schema. Not class of marshmallow
         schema, but instance, because it is more flexible"""
-        if schema:
-            self.defined_marshmallow_schemas.add(schema)
+        self.defined_marshmallow_schemas.add(schema)
 
     def change_definitions_references(self, dct: dict):
         """JSON Schemas defined with marshmallow_jsonschema library,
@@ -87,11 +75,8 @@ class OpenApiBuilder:
         return resulting_schemas['definitions']
 
     def set_response_for_openapi_method(
-        self, openapi_method: dict, schema=None,
+        self, openapi_method: dict, schema: CustomSchema,
     ):
-        if not schema:
-            return
-
         response_schema = dict_set(
             openapi_method, 'responses.200.content.application/json.schema', {},
         )
@@ -106,9 +91,9 @@ class OpenApiBuilder:
             )
 
     def set_request_for_openapi_method(
-        self, openapi_method: dict, schema: CustomSchema = None,
+        self, openapi_method: dict, schema: CustomSchema,
     ):
-        if schema and isinstance(schema, CustomSchema):
+        if isinstance(schema, CustomSchema):
             request_schema = dict_set(
                 openapi_method, 'requestBody.content.application/json.schema',
                 {},
@@ -116,30 +101,56 @@ class OpenApiBuilder:
             schema_path = self.SCHEMA_PATH_TEMPLATE.format(schema.json_schema_name)
             request_schema['$ref'] = schema_path
 
-    def set_query_params(self, openapi_method: dict, query_params: dict) -> None:
-        if not query_params:
-            return
-
+    def set_query_params(
+        self, openapi_method: dict, query_params: dict,
+    ) -> None:
         parameters = openapi_method.setdefault('parameters', [])
-        for model_obj, fields in query_params.items():
-            for field in fields:
-                param_type = self.python_type_to_string_map(
-                    getattr(model_obj, field).type.python_type
+        for model_class, fields in query_params.items():
+            for field_name in fields:
+                parameters.append(
+                    self.generate_query_param_for_openapi(
+                        model_class, field_name,
+                    )
                 )
-                model_name = get_name_of_model(model_obj)
-                if param_type == 'string':
-                    method_name = 'like'
-                else:
-                    method_name = 'in'
 
-                parameters.append({
-                    'name': f'{model_name}__{field}__{method_name}',
-                    'in': 'query',
-                    'schema': {'type': param_type},
-                })
+    def generate_query_param_for_openapi(self, model_class, field_name):
+        model_name = get_name_of_model(model_class)
+        parameter_type_string = self.get_query_parameter_type_string(
+            model_class, field_name,
+        )
+        filter_name = self.get_filter_name_for_param_type(
+            parameter_type_string
+        )
+        return {
+            'name': f'{model_name}__{field_name}__{filter_name}',
+            'in': 'query',
+            'schema': {'type': parameter_type_string},
+        }
+
+    @staticmethod
+    def get_query_parameter_type_string(model_class, field_name):
+        python_type = get_python_field_type_from_alchemy_field(
+            model_class, field_name,
+        )
+        mapping = {
+            str: 'string',
+            int: 'integer',
+            datetime: 'string',
+            date: 'string',
+        }
+        return mapping[python_type]
+
+    @staticmethod
+    def get_filter_name_for_param_type(param_type):
+        return 'like' if param_type == 'string' else 'in'
 
     def add_openapi_path(
-        self, path: str, method: str, request_schema: Schema = None, response_schema: Schema = None, query_params: dict = None,
+        self,
+        path: str,
+        method: str,
+        request_schema: CustomSchema = None,
+        response_schema: CustomSchema = None,
+        query_params: dict = None,
     ):
         # in the framework /schema/ is used for openapi, therefore no need
         # create openapi description of method that create openapi schema
@@ -147,20 +158,19 @@ class OpenApiBuilder:
             return
 
         openapi_new_method = dict_set(
-            self.openapi_object,
-            f'paths.{path}.{method}',
-            {},
+            self.openapi_object, f'paths.{path}.{method}', {},
         )
-        # IMPORTANT. In this brackets can't be comma, with comma
-        # operationId will be tuple, but must be string
         openapi_new_method['operationId'] = (
-            path.replace('/', '') + '_' + method.lower()
+            get_operation_id_for_openapi(path, method)
         )
 
-        self.register_marshmallow_schema(response_schema)
-        self.set_response_for_openapi_method(openapi_new_method, response_schema)
+        if response_schema:
+            self.register_marshmallow_schema(response_schema)
+            self.set_response_for_openapi_method(openapi_new_method, response_schema)
 
-        self.register_marshmallow_schema(request_schema)
-        self.set_request_for_openapi_method(openapi_new_method, request_schema)
+        if request_schema:
+            self.register_marshmallow_schema(request_schema)
+            self.set_request_for_openapi_method(openapi_new_method, request_schema)
 
-        self.set_query_params(openapi_new_method, query_params)
+        if query_params:
+            self.set_query_params(openapi_new_method, query_params)
