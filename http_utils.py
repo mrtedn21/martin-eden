@@ -36,23 +36,29 @@ class HttpHeadersParser:
         first_word = first_line.split(' ')[0]
         return first_word
 
-    def _get_path_and_query_params(self):
+    def _get_path_and_query_params(self) -> tuple[str, Optional[str]]:
         first_line = self.lines_of_header[0]
         second_word = first_line.split(' ')[1]
-        return second_word.split('?')
+        result = second_word.split('?')
+        if len(result) == 1:
+            path = result[0]
+            return path, None
+        else:
+            path, query_params = result
+            return path, query_params
 
     def _get_path(self):
         """Path is second name in first line"""
-        url_parts = self._get_path_and_query_params()
-        return url_parts[0]
+        path, _ = self._get_path_and_query_params()
+        return path
 
-    def _get_query_params(self) -> Optional[dict]:
-        url_parts = self._get_path_and_query_params()
-        if len(url_parts) == 1:
-            return
+    def _get_query_params(self) -> dict:
+        _, query_params_str = self._get_path_and_query_params()
+        if query_params_str is None:
+            return {}
 
         query_params = {}
-        for query_param in url_parts[1].split('&'):
+        for query_param in query_params_str.split('&'):
             key, value = query_param.split('=')
             query_params[key] = value
         return query_params

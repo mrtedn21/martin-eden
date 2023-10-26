@@ -30,7 +30,7 @@ async def get_users(query_params) -> str:
             ).select_from(UserOrm)
             .outerjoin(CityOrm).outerjoin(CountryOrm)
             .outerjoin(LanguageOrm).outerjoin(GenderOrm)
-            .filter(query_params)
+            .filter(*query_params)
         )
         result = await session.execute(sql_query)
         return user_list_get_schema.dumps(map(itemgetter(0), result.fetchall()))

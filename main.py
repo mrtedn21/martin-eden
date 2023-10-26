@@ -70,23 +70,43 @@ class HttpRequestHandler:
         )
         self.client_socket.close()
 
-    @staticmethod
     async def _get_response_for_get_method(
-        controller: Controller, query_params: dict,
+        self, controller: Controller, query_params: dict,
     ) -> str:
         controller_argument_names = get_argument_names(controller)
         if 'query_params' in controller_argument_names:
-            key, value = list(query_params.items())[0]
-            alchemy_filters = query_params_to_alchemy_filters(
-                controller.query_params, key, value,
+            query_params = self._prepare_query_parameters(
+                controller, query_params,
             )
-            response = await controller(query_params=alchemy_filters)
+            response = await controller(query_params)
         else:
             response = await controller()
 
         if isinstance(response, list) or isinstance(response, dict):
             response = json.dumps(response)
         return response
+
+    @staticmethod
+    def _prepare_query_parameters(
+        controller: Controller, query_params: dict,
+    ) -> list:
+        """If request contains query parameters, then this method
+        returns list of translated query params to sqlalchemy filters.
+        But if query params is empty, this method returns [True]
+        that means, no filter and return all data.
+
+        But anyway, filters must be list. In this case, user, in
+        controllers can use *filters and python correctly fill filters"""
+        if query_params:
+            alchemy_filters = []
+            for query_name, query_value in query_params.items():
+                new_filter = query_params_to_alchemy_filters(
+                    controller.query_params, query_name, query_value,
+                )
+                alchemy_filters.append(new_filter)
+            return alchemy_filters
+        else:
+            return [True]
 
     async def _get_response_for_post_method(
         self, controller: Controller, http_body: str,

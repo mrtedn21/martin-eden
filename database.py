@@ -32,7 +32,7 @@ inverse_types_map = {
 
 
 def query_params_to_alchemy_filters(filters, query_param, value):
-    """Example of query_param:
+    """Example of query_param argument from url:
         user__first_name__like=martin"""
     model_name, field_name, method_name = query_param.split('__')
 
