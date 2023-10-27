@@ -1,9 +1,14 @@
 import enum
 import inspect
-from typing import Callable
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
+
+if TYPE_CHECKING:
+    from database import Base as BaseModel
+
+T = TypeVar('T')
 
 
-def get_name_of_model(model_class):
+def get_name_of_model(model_class: 'BaseModel') -> str:
     model_name = model_class.__name__
     # remove "Orm" postfix from model name
     model_name = model_name[:-3]
@@ -22,7 +27,9 @@ def is_special_alchemy_field(field_name: str) -> bool:
     return field_name in alchemy_fields
 
 
-def is_simple_alchemy_field(alchemy_model, field_name: str) -> bool:
+def is_simple_alchemy_field(
+    alchemy_model: 'BaseModel', field_name: str,
+) -> bool:
     """Function determine if field_name is simple alchemy field.
     Simple field means str, int, etc
 
@@ -31,17 +38,21 @@ def is_simple_alchemy_field(alchemy_model, field_name: str) -> bool:
     return hasattr(getattr(alchemy_model, field_name), 'type')
 
 
-def is_enum_alchemy_field(alchemy_model, field_name: str) -> bool:
+def is_enum_alchemy_field(alchemy_model: 'BaseModel', field_name: str) -> bool:
     """Function determine if field of alchemy_model is enum"""
     field_type = getattr(alchemy_model, field_name).type.python_type
     return issubclass(field_type, enum.Enum)
 
 
-def get_python_field_type_from_alchemy_field(alchemy_model, field_name: str):
+def get_python_field_type_from_alchemy_field(
+    alchemy_model: 'BaseModel', field_name: str,
+) -> Any:
     return getattr(alchemy_model, field_name).type.python_type
 
 
-def is_property_secondary_relation(model, attribute_name):
+def is_property_secondary_relation(
+    model: 'BaseModel', attribute_name: str,
+) -> bool:
     """Sqlalchemy in its models force declare one relation in two models.
     What means. For example will take model "order" and model "product".
     Every "order" may have one "product". In database, in sql when we create
@@ -64,8 +75,10 @@ def is_property_secondary_relation(model, attribute_name):
         return False
 
 
-def is_property_foreign_key(model, attribute_name):
-    attribute = getattr(model, attribute_name)
+def is_property_foreign_key(
+    model_class: 'BaseModel', attribute_name: str,
+) -> bool:
+    attribute = getattr(model_class, attribute_name)
     try:
         foreign_keys = attribute.foreign_keys
         return bool(foreign_keys)
@@ -73,7 +86,7 @@ def is_property_foreign_key(model, attribute_name):
         return False
 
 
-def dict_set(dct: dict, path: str, value):
+def dict_set(dct: dict, path: str, value: Generic[T]) -> Generic[T]:
     keys = path.split('.')
     keys_except_last = keys[:-1]
     last_key = keys[-1]

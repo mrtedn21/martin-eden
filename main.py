@@ -27,11 +27,11 @@ async def get_openapi_schema() -> str:
 class HttpRequestHandler:
     def __init__(
         self, event_loop: AbstractEventLoop, client_socket: socket.socket,
-    ):
+    ) -> None:
         self.event_loop = event_loop
         self.client_socket = client_socket
 
-    async def handle_request(self):
+    async def handle_request(self) -> None:
         http_message: str = await self._read_message_from_socket()
         http_parser = HttpHeadersParser(http_message)
 
@@ -51,7 +51,9 @@ class HttpRequestHandler:
 
         await self._write_post_or_get_response_to_socket(response)
 
-    async def _write_post_or_get_response_to_socket(self, response: str):
+    async def _write_post_or_get_response_to_socket(
+        self, response: str,
+    ) -> None:
         headers = create_response_headers(200, content_type='application/json')
         await self.event_loop.sock_sendall(
             self.client_socket, (headers + response).encode('utf8'),
@@ -154,13 +156,13 @@ class HttpRequestHandler:
 
 
 class Backend:
-    def __init__(self):
+    def __init__(self) -> None:
         self.event_loop: Optional[AbstractEventLoop] = None
         self.server_socket: Optional[socket.socket] = None
         self._configure_sockets()
         OpenApiBuilder().write_marshmallow_schemas_to_openapi_doc()
 
-    def _configure_sockets(self):
+    def _configure_sockets(self) -> None:
         self.server_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM,
         )
@@ -172,11 +174,11 @@ class Backend:
         self.server_socket.setblocking(False)
         self.server_socket.bind(server_address)
 
-    async def handle_request(self, client_socket: socket.socket):
+    async def handle_request(self, client_socket: socket.socket) -> None:
         handler = HttpRequestHandler(self.event_loop, client_socket)
         await handler.handle_request()
 
-    async def main(self):
+    async def main(self) -> None:
         """The method listen server socket for connections, if connection
         is gotten, creates client_socket and sends response to it."""
 

@@ -12,7 +12,7 @@ class HttpMethod:
 
 
 class HttpHeadersParser:
-    def __init__(self, http_message: str):
+    def __init__(self, http_message: str) -> None:
         self.http_message: str = http_message
         self._detect_line_break_char()
         self.lines_of_header: list[str] = http_message.split(
@@ -24,7 +24,7 @@ class HttpHeadersParser:
         self.query_params = self._get_query_params()
         self.body: str = self._get_body()
 
-    def _detect_line_break_char(self):
+    def _detect_line_break_char(self) -> None:
         self.line_break_char: str = '\r'
 
         if '\r\n' in self.http_message:
@@ -49,7 +49,7 @@ class HttpHeadersParser:
             path, query_params = result
             return path, query_params
 
-    def _get_path(self):
+    def _get_path(self) -> str:
         """Path is second name in first line"""
         path, _ = self._get_path_and_query_params()
         return path
@@ -65,7 +65,7 @@ class HttpHeadersParser:
             query_params[key] = value
         return query_params
 
-    def _get_body(self):
+    def _get_body(self) -> str:
         """Body of http message starts after two line break characters"""
         position_of_body_starts = (
             self.http_message.find(self.line_break_char * 2) +

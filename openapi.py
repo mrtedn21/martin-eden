@@ -1,5 +1,6 @@
 import json
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
 from core import CustomJsonSchema, CustomSchema
 from utils import (
@@ -9,12 +10,15 @@ from utils import (
     get_python_field_type_from_alchemy_field,
 )
 
+if TYPE_CHECKING:
+    from database import Base as BaseModel
+
 
 class OpenApiBuilder:
     _instance = None
     SCHEMA_PATH_TEMPLATE = '#/components/schemas/{}'
 
-    def __new__(cls):
+    def __new__(cls) -> 'OpenApiBuilder':
         """This method makes from OpenApiBuilder - singleton"""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -23,13 +27,13 @@ class OpenApiBuilder:
                 cls.openapi_object = json.load(file)
         return cls._instance
 
-    def register_marshmallow_schema(self, schema: CustomSchema):
+    def register_marshmallow_schema(self, schema: CustomSchema) -> None:
         """Register schemas for openapi doc - using concrete
         instance of marshmallow schema. Not class of marshmallow
         schema, but instance, because it is more flexible"""
         self.defined_marshmallow_schemas.add(schema)
 
-    def change_definitions_references(self, dct: dict):
+    def change_definitions_references(self, dct: dict) -> None:
         """JSON Schemas defined with marshmallow_jsonschema library,
         all, include nested schemas, are placed in root of dictionary,
         therefore, if some schema have nested schema, it uses reference.
@@ -42,7 +46,7 @@ class OpenApiBuilder:
             if isinstance(value, dict):
                 self.change_definitions_references(value)
 
-    def write_marshmallow_schemas_to_openapi_doc(self):
+    def write_marshmallow_schemas_to_openapi_doc(self) -> None:
         """The method writes all registered schemas to openapi documentation"""
         marshmallow_json_schemas = self.generate_json_schemas()
         self.change_definitions_references(marshmallow_json_schemas)
@@ -80,7 +84,7 @@ class OpenApiBuilder:
 
     def set_response_for_openapi_method(
         self, openapi_method: dict, schema: CustomSchema,
-    ):
+    ) -> None:
         response_schema = dict_set(
             openapi_method,
             'responses.200.content.application/json.schema',
@@ -100,7 +104,7 @@ class OpenApiBuilder:
 
     def set_request_for_openapi_method(
         self, openapi_method: dict, schema: CustomSchema,
-    ):
+    ) -> None:
         if isinstance(schema, CustomSchema):
             request_schema = dict_set(
                 openapi_method, 'requestBody.content.application/json.schema',
@@ -123,7 +127,9 @@ class OpenApiBuilder:
                     ),
                 )
 
-    def generate_query_param_for_openapi(self, model_class, field_name):
+    def generate_query_param_for_openapi(
+        self, model_class: 'BaseModel', field_name: str,
+    ) -> dict:
         model_name = get_name_of_model(model_class)
         parameter_type_string = self.get_query_parameter_type_string(
             model_class, field_name,
@@ -138,7 +144,9 @@ class OpenApiBuilder:
         }
 
     @staticmethod
-    def get_query_parameter_type_string(model_class, field_name):
+    def get_query_parameter_type_string(
+        model_class: 'BaseModel', field_name: str,
+    ) -> str:
         python_type = get_python_field_type_from_alchemy_field(
             model_class, field_name,
         )
@@ -151,7 +159,7 @@ class OpenApiBuilder:
         return mapping[python_type]
 
     @staticmethod
-    def get_filter_name_for_param_type(param_type):
+    def get_filter_name_for_param_type(param_type: str) -> str:
         return 'like' if param_type == 'string' else 'in'
 
     def add_openapi_path(
@@ -161,7 +169,7 @@ class OpenApiBuilder:
         request_schema: CustomSchema = None,
         response_schema: CustomSchema = None,
         query_params: dict = None,
-    ):
+    ) -> None:
         # in the framework /schema/ is used for openapi, therefore no need
         # create openapi description of method that create openapi schema
         if path == '/schema/':

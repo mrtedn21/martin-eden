@@ -1,4 +1,5 @@
 from operator import itemgetter
+from typing import Iterable
 
 from sqlalchemy import select
 
@@ -25,7 +26,7 @@ db = DataBase()
         GenderOrm: ['name'],
     },
 )
-async def get_users(query_params) -> str:
+async def get_users(query_params: Iterable) -> str:
     async with db.create_session() as session:
         sql_query = (
             select(

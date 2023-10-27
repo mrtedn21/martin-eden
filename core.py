@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, ParamSpecArgs, ParamSpecKwargs
 
 from marshmallow import Schema
 from marshmallow.decorators import post_dump
@@ -11,12 +11,19 @@ class Controller:
     response_schema: Schema
     query_params: dict
 
-    def __call__(self, *args, **kwargs):
+    def __call__(
+        self, *args: ParamSpecArgs, **kwargs: ParamSpecKwargs,
+    ) -> None:
         pass
 
 
 class CustomSchema(Schema):
-    def __init__(self, *args, json_schema_name=None, **kwargs):
+    def __init__(
+        self,
+        *args: ParamSpecArgs,
+        json_schema_name: str = None,
+        **kwargs: ParamSpecKwargs,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.json_schema_name = json_schema_name
         self.__name__ = json_schema_name
@@ -24,7 +31,7 @@ class CustomSchema(Schema):
 
 class CustomJsonSchema(JSONSchema):
     @post_dump
-    def wrap(self, data, **_) -> dict[str, Any]:
+    def wrap(self, data: dict, **_) -> dict[str, Any]:
         """Wrap this with the root schema definitions."""
         if self.nested:  # no need to wrap, will be in outer defs
             return data

@@ -1,7 +1,7 @@
 import dataclasses
 from dataclasses import field, make_dataclass
 from datetime import date, datetime
-from typing import Callable
+from typing import Any, Callable, Iterable
 
 from marshmallow.fields import Date, DateTime, Int, Nested, Str
 from marshmallow_enum import EnumField as MarshmallowEnum
@@ -40,7 +40,9 @@ inverse_types_map = {
 }
 
 
-def query_params_to_alchemy_filters(filters, query_param, value):
+def query_params_to_alchemy_filters(
+    filters: dict, query_param: str, value: str,
+) -> Any:
     """Example of query_param argument from url:
         user__first_name__like=martin"""
     model_name, field_name, method_name = query_param.split('__')
@@ -64,7 +66,7 @@ class SqlAlchemyToMarshmallow(type(Base)):
     """Metaclass get sql alchemy model, creates marshmallow
     schema based on it"""
 
-    def __new__(cls, name, bases, fields):
+    def __new__(cls, name: str, bases: Iterable, fields: dict) -> type:
         origin_model: Base = bases[0]
 
         origin_model_field_names = [
@@ -107,7 +109,7 @@ class BaseDataclass:
 
 
 class MarshmallowToDataclass(type(CustomSchema)):
-    def __new__(cls, name, bases, fields):
+    def __new__(cls, name: str, bases: Iterable, fields: dict) -> type:
         origin_schema_class = bases[0]
         origin_schema = origin_schema_class()
         origin_model_fields = origin_schema.fields
@@ -136,7 +138,7 @@ class MarshmallowToDataclass(type(CustomSchema)):
 
 
 class DataBase:
-    def __init__(self):
+    def __init__(self) -> None:
         self.engine: AsyncEngine = create_async_engine(
             'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
             echo=True,

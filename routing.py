@@ -1,3 +1,5 @@
+from typing import Callable, ParamSpecArgs, ParamSpecKwargs
+
 from core import Controller, CustomSchema
 from openapi import OpenApiBuilder
 
@@ -48,10 +50,10 @@ def register_route(
     request_schema: CustomSchema = None,
     response_schema: CustomSchema = None,
     query_params: dict = None,
-):
+) -> Callable:
     """This is decorator only, wrapping over _register_route."""
-    def wrap(func):
-        def wrapped_f(*args, **kwargs):
+    def wrap(func: Callable) -> Callable:
+        def wrapped_f(*args: ParamSpecArgs, **kwargs: ParamSpecKwargs) -> None:
             func(*args, **kwargs)
 
         func.request_schema = request_schema
