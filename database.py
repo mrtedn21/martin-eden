@@ -5,14 +5,23 @@ from typing import Callable
 
 from marshmallow.fields import Date, DateTime, Int, Nested, Str
 from marshmallow_enum import EnumField as MarshmallowEnum
-from sqlalchemy.ext.asyncio import (AsyncAttrs, AsyncEngine,
-                                    async_sessionmaker, create_async_engine)
+from sqlalchemy.ext.asyncio import (
+    AsyncAttrs,
+    AsyncEngine,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase
 
 from core import CustomSchema
-from utils import (get_name_of_model, get_python_field_type_from_alchemy_field,
-                   is_enum_alchemy_field, is_property_secondary_relation,
-                   is_simple_alchemy_field, is_special_alchemy_field)
+from utils import (
+    get_name_of_model,
+    get_python_field_type_from_alchemy_field,
+    is_enum_alchemy_field,
+    is_property_secondary_relation,
+    is_simple_alchemy_field,
+    is_special_alchemy_field,
+)
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -37,7 +46,7 @@ def query_params_to_alchemy_filters(filters, query_param, value):
     model_name, field_name, method_name = query_param.split('__')
 
     model_class = None
-    for model_class_iter in filters.keys():
+    for model_class_iter in filters:
         if get_name_of_model(model_class_iter) == model_name:
             model_class = model_class_iter
     if not model_class:
@@ -82,12 +91,11 @@ class SqlAlchemyToMarshmallow(type(Base)):
                     result_fields[field_name] = (
                         types_map[python_field_type](required=False)
                     )
-            else:
-                # add nested fields
-                if fields.get(field_name):
-                    result_fields[field_name] = Nested(
-                        fields[field_name], required=False,
-                    )
+            # add nested fields
+            elif fields.get(field_name):
+                result_fields[field_name] = Nested(
+                    fields[field_name], required=False,
+                )
 
         result_model = CustomSchema.from_dict(result_fields, name=name)
         return result_model
@@ -110,13 +118,12 @@ class MarshmallowToDataclass(type(CustomSchema)):
                 new_type_for_dataclass = (
                     fields['__annotations__'][field_name]
                 )
+            elif hasattr(field_type, 'enum'):
+                new_type_for_dataclass = field_type.enum
             else:
-                if hasattr(field_type, 'enum'):
-                    new_type_for_dataclass = field_type.enum
-                else:
-                    new_type_for_dataclass = (
-                        inverse_types_map[type(field_type)]
-                    )
+                new_type_for_dataclass = (
+                    inverse_types_map[type(field_type)]
+                )
 
             result_fields.append((
                 field_name, new_type_for_dataclass, field(default=None),

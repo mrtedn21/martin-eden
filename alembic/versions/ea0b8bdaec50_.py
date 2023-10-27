@@ -23,7 +23,11 @@ def upgrade() -> None:
     op.create_table('chats',
     sa.Column('pk', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
-    sa.Column('chat_type', sa.Enum('DIRECT', 'GROUP', 'SELF', name='chattype'), nullable=False),
+    sa.Column(
+        'chat_type',
+        sa.Enum('DIRECT', 'GROUP', 'SELF', name='chattype'),
+        nullable=False,
+    ),
     sa.Column('last_message_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['last_message_id'], ['users.pk'], ),
     sa.PrimaryKeyConstraint('pk')

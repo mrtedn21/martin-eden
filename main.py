@@ -82,7 +82,7 @@ class HttpRequestHandler:
         else:
             response = await controller()
 
-        if isinstance(response, list) or isinstance(response, dict):
+        if isinstance(response, (list, dict)):
             response = json.dumps(response)
         return response
 
@@ -137,7 +137,7 @@ class HttpRequestHandler:
 
     @staticmethod
     def _get_dataclass_from_argument_for_post_method(
-        controller: Controller
+        controller: Controller,
     ) -> tuple:
         controller_annotations = controller.__annotations__.copy()
         controller_annotations.pop('return', None)
@@ -148,7 +148,7 @@ class HttpRequestHandler:
         )):
             raise ControllerDefinitionError(
                 'in post controller only one '
-                'argument can be defined - dataclass'
+                'argument can be defined - dataclass',
             )
         return dataclass_name, dataclass_object
 
@@ -189,7 +189,7 @@ class Backend:
             )
             print(f'get request for connection from {client_address}')
             await asyncio.create_task(
-                self.handle_request(client_socket)
+                self.handle_request(client_socket),
             )
 
 

@@ -6,8 +6,11 @@ from database import DataBase
 from routing import register_route
 from users.data_classes import User
 from users.models import CityOrm, CountryOrm, GenderOrm, LanguageOrm, UserOrm
-from users.schemas import (user_create_schema, user_get_schema,
-                           user_list_get_schema)
+from users.schemas import (
+    user_create_schema,
+    user_get_schema,
+    user_list_get_schema,
+)
 
 db = DataBase()
 
@@ -20,20 +23,22 @@ db = DataBase()
         CityOrm: ['name'],
         CountryOrm: ['name'],
         GenderOrm: ['name'],
-    }
+    },
 )
 async def get_users(query_params) -> str:
     async with db.create_session() as session:
         sql_query = (
             select(
-                UserOrm, CityOrm, CountryOrm, LanguageOrm, GenderOrm
+                UserOrm, CityOrm, CountryOrm, LanguageOrm, GenderOrm,
             ).select_from(UserOrm)
             .outerjoin(CityOrm).outerjoin(CountryOrm)
             .outerjoin(LanguageOrm).outerjoin(GenderOrm)
             .filter(*query_params)
         )
         result = await session.execute(sql_query)
-        return user_list_get_schema.dumps(map(itemgetter(0), result.fetchall()))
+        return user_list_get_schema.dumps(
+            map(itemgetter(0), result.fetchall()),
+        )
 
 
 @register_route(

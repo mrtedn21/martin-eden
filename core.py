@@ -37,6 +37,6 @@ class CustomJsonSchema(JSONSchema):
         root = {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "definitions": self._nested_schema_classes,
-            "$ref": "#/definitions/{name}".format(name=schema_name),
+            "$ref": f"#/definitions/{schema_name}",
         }
         return root

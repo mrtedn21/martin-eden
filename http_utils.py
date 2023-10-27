@@ -15,7 +15,9 @@ class HttpHeadersParser:
     def __init__(self, http_message: str):
         self.http_message: str = http_message
         self._detect_line_break_char()
-        self.lines_of_header: list[str] = http_message.split(self.line_break_char)
+        self.lines_of_header: list[str] = http_message.split(
+            self.line_break_char,
+        )
 
         self.method_name: str = self._get_method_name()
         self.path: str = self._get_path()

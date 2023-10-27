@@ -4,8 +4,12 @@ from sqlalchemy import select
 
 from chats.data_classes import Chat, Message
 from chats.models import ChatOrm, MessageOrm
-from chats.schemas import (chat_create_schema, chat_get_schema,
-                           message_create_schema, message_get_schema)
+from chats.schemas import (
+    chat_create_schema,
+    chat_get_schema,
+    message_create_schema,
+    message_get_schema,
+)
 from database import DataBase
 from routing import register_route
 from users.models import UserOrm

@@ -59,12 +59,8 @@ def is_property_secondary_relation(model, attribute_name):
 
     try:
         collection_class = attribute.prop.collection_class
+        return bool(collection_class)
     except AttributeError:
-        return False
-
-    if collection_class is not None:
-        return True
-    else:
         return False
 
 
@@ -72,12 +68,8 @@ def is_property_foreign_key(model, attribute_name):
     attribute = getattr(model, attribute_name)
     try:
         foreign_keys = attribute.foreign_keys
+        return bool(foreign_keys)
     except AttributeError:
-        return False
-
-    if foreign_keys:
-        return True
-    else:
         return False
 
 

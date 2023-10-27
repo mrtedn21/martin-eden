@@ -1,9 +1,13 @@
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
+
+if TYPE_CHECKING:
+    from chats.models import MessageOrm
 
 
 class UserOrm(Base):
@@ -23,7 +27,9 @@ class UserOrm(Base):
     language_id: Mapped[int] = mapped_column(
         ForeignKey('languages.pk'), nullable=True,
     )
-    language: Mapped['LanguageOrm'] = relationship(back_populates='language_users')
+    language: Mapped['LanguageOrm'] = relationship(
+        back_populates='language_users',
+    )
 
     gender_id: Mapped[int] = mapped_column(
         ForeignKey('genders.pk'), nullable=True,
@@ -54,7 +60,9 @@ class LanguageOrm(Base):
 
     pk: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
-    language_users: Mapped[list['UserOrm']] = relationship(back_populates='language')
+    language_users: Mapped[list['UserOrm']] = relationship(
+        back_populates='language',
+    )
 
 
 class GenderOrm(Base):
@@ -62,4 +70,6 @@ class GenderOrm(Base):
 
     pk: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
-    gender_users: Mapped[list['UserOrm']] = relationship(back_populates='gender')
+    gender_users: Mapped[list['UserOrm']] = relationship(
+        back_populates='gender',
+    )

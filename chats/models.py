@@ -1,10 +1,14 @@
 import enum
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
+
+if TYPE_CHECKING:
+    from users.models import UserOrm
 
 
 class ChatType(enum.Enum):
@@ -20,8 +24,12 @@ class ChatOrm(Base):
     name: Mapped[str] = mapped_column(nullable=True)
     chat_type: Mapped[ChatType] = mapped_column(default=ChatType.DIRECT)
 
-    last_message_id: Mapped[int] = mapped_column(ForeignKey('users.pk'), nullable=True)
-    last_message: Mapped['MessageOrm'] = relationship(back_populates='last_message_in_chat')
+    last_message_id: Mapped[int] = mapped_column(
+        ForeignKey('users.pk'), nullable=True,
+    )
+    last_message: Mapped['MessageOrm'] = relationship(
+        back_populates='last_message_in_chat',
+    )
     messages: Mapped[list['MessageOrm']] = relationship(back_populates='chat')
 
     participants: Mapped[list['UserOrm']] = relationship(secondary=Table(
@@ -44,7 +52,11 @@ class MessageOrm(Base):
 
     chat_id: Mapped[int] = mapped_column(ForeignKey('chats.pk'))
     chat: Mapped['ChatOrm'] = relationship(back_populates='messages')
-    last_message_in_chat: Mapped['ChatOrm'] = relationship(back_populates='last_message')
+    last_message_in_chat: Mapped['ChatOrm'] = relationship(
+        back_populates='last_message',
+    )
 
-    reply_to_message_id: Mapped[int] = mapped_column(ForeignKey('messages.pk'), nullable=True)
+    reply_to_message_id: Mapped[int] = mapped_column(
+        ForeignKey('messages.pk'), nullable=True,
+    )
     reply_to_message: Mapped['MessageOrm'] = relationship(remote_side=[pk])

@@ -1,8 +1,6 @@
 from typing import Iterable
 
-from core import CustomSchema
-
-from core import Controller
+from core import Controller, CustomSchema
 from openapi import OpenApiBuilder
 
 DictOfRoutes = dict[str, dict[str, Controller]]
@@ -38,16 +36,22 @@ def get_controller(path: str, method: str) -> Controller:
     try:
         methods = routes[path]
         controller = methods[method.upper()]
-    except KeyError:
+    except KeyError as exc:
         # Temp decision for not existing paths
         # In future must return 404 not found
         raise FindControllerError(
-            f'Controller not found with path: {path} and method: {method}'
-        )
+            f'Controller not found with path: {path} and method: {method}',
+        ) from exc
     return controller
 
 
-def register_route(path, methods, request_schema=None, response_schema=None, query_params=None):
+def register_route(
+    path: str,
+    methods: Iterable[str],
+    request_schema: CustomSchema = None,
+    response_schema: CustomSchema = None,
+    query_params: dict = None,
+):
     """This is decorator only, wrapping over _register_route."""
     def wrap(func):
         def wrapped_f(*args, **kwargs):
@@ -56,7 +60,9 @@ def register_route(path, methods, request_schema=None, response_schema=None, que
         func.request_schema = request_schema
         func.response_schema = response_schema
         func.query_params = query_params
-        _register_route(path, methods, func, request_schema, response_schema, query_params)
+        _register_route(
+            path, methods, func, request_schema, response_schema, query_params,
+        )
         return wrapped_f
 
     return wrap

@@ -1,9 +1,13 @@
 import json
 from datetime import date, datetime
 
-from utils import get_python_field_type_from_alchemy_field, get_operation_id_for_openapi
 from core import CustomJsonSchema, CustomSchema
-from utils import get_name_of_model, dict_set
+from utils import (
+    dict_set,
+    get_name_of_model,
+    get_operation_id_for_openapi,
+    get_python_field_type_from_alchemy_field,
+)
 
 
 class OpenApiBuilder:
@@ -13,7 +17,7 @@ class OpenApiBuilder:
     def __new__(cls):
         """This method makes from OpenApiBuilder - singleton"""
         if cls._instance is None:
-            cls._instance = super(OpenApiBuilder, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls.defined_marshmallow_schemas = set()
             with open('example.json') as file:
                 cls.openapi_object = json.load(file)
@@ -43,7 +47,7 @@ class OpenApiBuilder:
         marshmallow_json_schemas = self.generate_json_schemas()
         self.change_definitions_references(marshmallow_json_schemas)
         result_json_schemas = self.clean_schemas_from_additional_properties(
-            marshmallow_json_schemas
+            marshmallow_json_schemas,
         )
         self.openapi_object['components']['schemas'] = result_json_schemas
 
@@ -78,12 +82,16 @@ class OpenApiBuilder:
         self, openapi_method: dict, schema: CustomSchema,
     ):
         response_schema = dict_set(
-            openapi_method, 'responses.200.content.application/json.schema', {},
+            openapi_method,
+            'responses.200.content.application/json.schema',
+            {},
         )
         if schema.many:
             response_schema['type'] = 'array'
             response_schema['items'] = {
-                '$ref': self.SCHEMA_PATH_TEMPLATE.format(schema.json_schema_name),
+                '$ref': self.SCHEMA_PATH_TEMPLATE.format(
+                    schema.json_schema_name,
+                ),
             }
         else:
             response_schema['$ref'] = self.SCHEMA_PATH_TEMPLATE.format(
@@ -98,7 +106,9 @@ class OpenApiBuilder:
                 openapi_method, 'requestBody.content.application/json.schema',
                 {},
             )
-            schema_path = self.SCHEMA_PATH_TEMPLATE.format(schema.json_schema_name)
+            schema_path = self.SCHEMA_PATH_TEMPLATE.format(
+                schema.json_schema_name,
+            )
             request_schema['$ref'] = schema_path
 
     def set_query_params(
@@ -110,7 +120,7 @@ class OpenApiBuilder:
                 parameters.append(
                     self.generate_query_param_for_openapi(
                         model_class, field_name,
-                    )
+                    ),
                 )
 
     def generate_query_param_for_openapi(self, model_class, field_name):
@@ -119,7 +129,7 @@ class OpenApiBuilder:
             model_class, field_name,
         )
         filter_name = self.get_filter_name_for_param_type(
-            parameter_type_string
+            parameter_type_string,
         )
         return {
             'name': f'{model_name}__{field_name}__{filter_name}',
@@ -166,11 +176,15 @@ class OpenApiBuilder:
 
         if response_schema:
             self.register_marshmallow_schema(response_schema)
-            self.set_response_for_openapi_method(openapi_new_method, response_schema)
+            self.set_response_for_openapi_method(
+                openapi_new_method, response_schema,
+            )
 
         if request_schema:
             self.register_marshmallow_schema(request_schema)
-            self.set_request_for_openapi_method(openapi_new_method, request_schema)
+            self.set_request_for_openapi_method(
+                openapi_new_method, request_schema,
+            )
 
         if query_params:
             self.set_query_params(openapi_new_method, query_params)
