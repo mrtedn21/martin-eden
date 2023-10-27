@@ -18,7 +18,7 @@ db = DataBase()
 
 
 @register_route(
-    '/messages/', ('get', ),
+    '/messages/', 'get',
     response_schema=message_get_schema,
 )
 async def get_messages() -> list[Message]:
@@ -36,7 +36,7 @@ async def get_messages() -> list[Message]:
 
 
 @register_route(
-    '/messages/', ('post',),
+    '/messages/', 'post',
     request_schema=message_create_schema,
     response_schema=message_create_schema,
 )
@@ -55,7 +55,7 @@ async def create_message(new_message: Message) -> Message:
 
 
 @register_route(
-    '/chats/', ('get', ),
+    '/chats/', 'get',
     response_schema=chat_get_schema,
 )
 async def get_chats() -> list[Chat]:
@@ -67,7 +67,7 @@ async def get_chats() -> list[Chat]:
 
 
 @register_route(
-    '/chats/', ('post',),
+    '/chats/', 'post',
     request_schema=chat_create_schema,
     response_schema=chat_create_schema,
 )

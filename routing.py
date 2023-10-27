@@ -1,5 +1,3 @@
-from typing import Iterable
-
 from core import Controller, CustomSchema
 from openapi import OpenApiBuilder
 
@@ -18,18 +16,17 @@ class FindControllerError(Exception):
 
 def _register_route(
     path: str,
-    methods: Iterable[str],
+    method: str,
     controller: Controller,
     request_schema: CustomSchema = None,
     response_schema: CustomSchema = None,
     query_params: dict = None,
 ) -> None:
     new_path = routes.setdefault(path, {})
-    for method in methods:
-        new_path[method.upper()] = controller
-        OpenApiBuilder().add_openapi_path(
-            path, method, request_schema, response_schema, query_params,
-        )
+    new_path[method.upper()] = controller
+    OpenApiBuilder().add_openapi_path(
+        path, method, request_schema, response_schema, query_params,
+    )
 
 
 def get_controller(path: str, method: str) -> Controller:
@@ -47,7 +44,7 @@ def get_controller(path: str, method: str) -> Controller:
 
 def register_route(
     path: str,
-    methods: Iterable[str],
+    method: str,
     request_schema: CustomSchema = None,
     response_schema: CustomSchema = None,
     query_params: dict = None,
@@ -61,7 +58,7 @@ def register_route(
         func.response_schema = response_schema
         func.query_params = query_params
         _register_route(
-            path, methods, func, request_schema, response_schema, query_params,
+            path, method, func, request_schema, response_schema, query_params,
         )
         return wrapped_f
 

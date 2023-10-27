@@ -16,7 +16,7 @@ db = DataBase()
 
 
 @register_route(
-    '/users/', ('get', ),
+    '/users/', 'get',
     response_schema=user_list_get_schema,
     query_params={
         UserOrm: ['first_name', 'last_name'],
@@ -42,7 +42,7 @@ async def get_users(query_params) -> str:
 
 
 @register_route(
-    '/users/', ('post', ),
+    '/users/', 'post',
     request_schema=user_create_schema,
     response_schema=user_get_schema,
 )

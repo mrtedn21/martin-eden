@@ -19,7 +19,7 @@ from utils import get_argument_names
 db = DataBase()
 
 
-@register_route('/schema/', ('get', ))
+@register_route('/schema/', 'get')
 async def get_openapi_schema() -> str:
     return json.dumps(OpenApiBuilder().openapi_object)
 
