@@ -10,4 +10,3 @@ class Chat(ChatSchema, metaclass=MarshmallowToDataclass):
 class Message(MessageSchema, metaclass=MarshmallowToDataclass):
     created_by: User = None
     reply_to_message: "Message" = None
-
