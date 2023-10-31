@@ -1,9 +1,13 @@
 [tool.poetry]
-name = "framework"
-version = "0.3.0"
-description = "custom async backend framework on sockets and without asyncio"
+name = "martin-eden"
+version = "0.8.0"
+description = "async backend framework on sockets"
 authors = ["mrtedn21 <bezgin.sasha06@gmail.com>"]
 readme = "README.md"
+repository = "https://github.com/mrtedn21/Eden"
+packages = [
+    { include = "martin-eden" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.11"
