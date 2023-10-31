@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "martin-eden"
-version = "0.8.0"
+version = "0.3.1"
 description = "async backend framework on sockets"
 authors = ["mrtedn21 <bezgin.sasha06@gmail.com>"]
 readme = "README.md"
 repository = "https://github.com/mrtedn21/Eden"
 packages = [
-    { include = "martin-eden" },
+    { include = "martin_eden" },
 ]
 
 [tool.poetry.dependencies]

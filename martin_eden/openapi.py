@@ -2,8 +2,8 @@ import json
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from core import CustomJsonSchema, CustomSchema
-from utils import (
+from martin_eden.core import CustomJsonSchema, CustomSchema
+from martin_eden.utils import (
     dict_set,
     get_name_of_model,
     get_operation_id_for_openapi,

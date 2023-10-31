@@ -1,7 +1,7 @@
 from typing import Callable, ParamSpecArgs, ParamSpecKwargs
 
-from core import Controller, CustomSchema
-from openapi import OpenApiBuilder
+from martin_eden.core import Controller, CustomSchema
+from martin_eden.openapi import OpenApiBuilder
 
 DictOfRoutes = dict[str, dict[str, Controller]]
 
