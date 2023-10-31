@@ -1,5 +1,6 @@
 import json
 from datetime import date, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from martin_eden.core import CustomJsonSchema, CustomSchema
@@ -23,7 +24,7 @@ class OpenApiBuilder:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls.defined_marshmallow_schemas = set()
-            with open('example.json') as file:
+            with open(Path(__file__).parent / 'example.json') as file:
                 cls.openapi_object = json.load(file)
         return cls._instance
 
@@ -48,6 +49,9 @@ class OpenApiBuilder:
 
     def write_marshmallow_schemas_to_openapi_doc(self) -> None:
         """The method writes all registered schemas to openapi documentation"""
+        if not self.defined_marshmallow_schemas:
+            return
+
         marshmallow_json_schemas = self.generate_json_schemas()
         self.change_definitions_references(marshmallow_json_schemas)
         result_json_schemas = self.clean_schemas_from_additional_properties(

@@ -4,16 +4,17 @@ import json
 import socket
 from asyncio import AbstractEventLoop
 from typing import Any, Optional
+from martin_eden.routing import FindControllerError
 
 from dacite import from_dict as dataclass_from_dict
 
-#from chats import controllers as chat_controllers  # noqa: F401
+from chats import controllers as chat_controllers  # noqa: F401
 from martin_eden.core import Controller
 from martin_eden.database import DataBase, query_params_to_alchemy_filters
 from martin_eden.http_utils import HttpHeadersParser, HttpMethod, create_response_headers
 from martin_eden.openapi import OpenApiBuilder
 from martin_eden.routing import ControllerDefinitionError, get_controller, register_route
-#from users import controllers as user_controllers  # noqa: F401
+from users import controllers as user_controllers  # noqa: F401
 from martin_eden.utils import get_argument_names
 
 db = DataBase()
@@ -38,7 +39,10 @@ class HttpRequestHandler:
         if http_parser.method_name == HttpMethod.OPTIONS:
             return await self._send_response_for_options_method()
 
-        controller = get_controller(http_parser.path, http_parser.method_name)
+        try:
+            controller = get_controller(http_parser.path, http_parser.method_name)
+        except FindControllerError:
+            return await self._write_post_or_get_response_to_socket('404 not found')
 
         if http_parser.method_name == HttpMethod.POST:
             response = await self._get_response_for_post_method(
