@@ -8,13 +8,11 @@ from martin_eden.routing import FindControllerError
 
 from dacite import from_dict as dataclass_from_dict
 
-from chats import controllers as chat_controllers  # noqa: F401
 from martin_eden.core import Controller
 from martin_eden.database import DataBase, query_params_to_alchemy_filters
 from martin_eden.http_utils import HttpHeadersParser, HttpMethod, create_response_headers
 from martin_eden.openapi import OpenApiBuilder
 from martin_eden.routing import ControllerDefinitionError, get_controller, register_route
-from users import controllers as user_controllers  # noqa: F401
 from martin_eden.utils import get_argument_names
 
 db = DataBase()

@@ -67,11 +67,18 @@ class HttpHeadersParser:
 
     def _get_body(self) -> str:
         """Body of http message starts after two line break characters"""
-        position_of_body_starts = (
-            self.http_message.find(self.line_break_char * 2) +
-            len(self.line_break_char * 2)
+        position_of_headers_end = (
+            self.http_message.find(self.line_break_char * 2)
         )
-        return self.http_message[position_of_body_starts:]
+        len_of_line_breaks = len(self.line_break_char * 2)
+        position_of_body_starts = (
+            position_of_headers_end + len_of_line_breaks
+        )
+
+        if position_of_headers_end == -1:
+            return ''
+        else:
+            return self.http_message[position_of_body_starts]
 
 
 def create_response_headers(
