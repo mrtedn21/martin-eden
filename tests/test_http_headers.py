@@ -70,3 +70,9 @@ def test_not_empty_query_params(http_message_with_query_params):
 def test_empty_body(http_message):
     parser = HttpHeadersParser(http_message)
     assert parser.body == ''
+
+
+def test_not_empty_body(http_message):
+    http_message = http_message + '\n{"test: "test"}'
+    parser = HttpHeadersParser(http_message)
+    assert parser.body == '{"test: "test"}'

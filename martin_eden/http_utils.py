@@ -78,7 +78,7 @@ class HttpHeadersParser:
         if position_of_headers_end == -1:
             return ''
         else:
-            return self.http_message[position_of_body_starts]
+            return self.http_message[position_of_body_starts:]
 
 
 def create_response_headers(
