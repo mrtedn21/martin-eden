@@ -1,4 +1,6 @@
-from martin_eden.http_utils import HttpHeadersParser
+from martin_eden.http_utils import (
+    HttpHeadersParser, create_response_headers,
+)
 import pytest
 
 
@@ -39,6 +41,18 @@ def http_message():
 def http_message_with_query_params():
     return base_http_message.replace(
         '/users/', '/users?some_param=some_value',
+    )
+
+
+@pytest.fixture
+def http_headers():
+    return (
+        'HTTP/1.0 200\n'
+        'Access-Control-Allow-Origin: *\n'
+        'Access-Control-Allow-Methods: POST, GET, OPTIONS\n'
+        'Access-Control-Allow-Headers: origin, content-type, accept\n'
+        'Access-Control-Allow-Credentials: true\n'
+        'Access-Control-Max-Age: 86400\n\n'
     )
 
 
@@ -87,3 +101,26 @@ def test_line_break_detect(http_message, line_break_char):
         http_message.replace('\n', line_break_char),
     )
     assert parser.line_break_char == line_break_char
+
+
+def test_headers_creating(http_headers):
+    headers = create_response_headers(200)
+    assert headers == http_headers
+
+
+def test_headers_creating_for_options(http_headers):
+    http_headers = (
+        http_headers[:-1] +
+        'Allow: OPTIONS, GET, POST\n\n'
+    )
+    headers = create_response_headers(200, for_options=True)
+    assert headers == http_headers
+
+
+def test_headers_creating_with_content_type(http_headers):
+    http_headers = (
+        http_headers[:-1] +
+        'Content-Type: application/json;charset=UTF-8\n\n'
+    )
+    headers = create_response_headers(200, 'application/json')
+    assert headers == http_headers
