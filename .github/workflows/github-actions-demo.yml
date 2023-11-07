@@ -15,6 +15,7 @@ jobs:
         with:
           python-version: '3.11'
           architecture: 'x64'
+          cache: 'poetry'
 
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
