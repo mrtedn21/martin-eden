@@ -20,4 +20,6 @@ jobs:
         pip install sqlalchemy asyncpg uvloop alembic psycopg2 marshmallow marshmallow-jsonschema dacite marshmallow-enum pytest
     - name: Run pytest
       run: |
+        PYTHONPATH=$(pwd)       
+        export PYTHONPATH
         pytest
