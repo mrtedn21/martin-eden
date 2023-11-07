@@ -28,6 +28,9 @@ jobs:
       - name: print pwd
         run: pwd
 
+      - name: print ls
+        run: ls
+
       - name: Testing
         run: |
           python -m pip install pytest
