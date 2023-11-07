@@ -33,6 +33,8 @@ jobs:
 
       - name: Testing
         run: |
+          PYTHONPATH=$(pwd)       
+          export PYTHONPATH
           python -m pip install pytest
           pytest
 
