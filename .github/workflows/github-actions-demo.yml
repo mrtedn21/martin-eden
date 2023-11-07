@@ -19,6 +19,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install poetry
         poetry install --with=dev
-    - name: Run tox
+    - name: Run pytest
       run: |
-        tox -e py
+        pytest
