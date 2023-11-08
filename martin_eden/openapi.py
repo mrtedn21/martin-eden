@@ -3,7 +3,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from martin_eden.core import CustomJsonSchema, CustomSchema
+from martin_eden.base import CustomJsonSchema, CustomSchema
 from martin_eden.utils import (
     dict_set,
     get_name_of_model,

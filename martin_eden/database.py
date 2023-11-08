@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 
-from martin_eden.core import CustomSchema
+from martin_eden.base import CustomSchema
 from martin_eden.utils import (
     get_name_of_model,
     get_python_field_type_from_alchemy_field,
