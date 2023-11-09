@@ -16,6 +16,9 @@ class Controller:
     ) -> None:
         pass
 
+    def __await__(self):
+        pass
+
 
 class CustomSchema(Schema):
     def __init__(
