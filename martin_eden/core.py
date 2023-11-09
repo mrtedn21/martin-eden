@@ -24,24 +24,24 @@ async def get_openapi_schema() -> str:
     return json.dumps(OpenApiBuilder().openapi_object)
 
 
-class HttpRequestHandler:
-    def __init__(
-        self, event_loop: AbstractEventLoop, client_socket: socket.socket,
-    ) -> None:
-        self.event_loop = event_loop
-        self.client_socket = client_socket
+class HttpMessageHandler:
+    def __init__(self, message: bytes) -> None:
+        self.http_message = message.decode('utf8')
 
-    async def handle_request(self) -> None:
-        http_message: str = await self._read_message_from_socket()
-        http_parser = HttpHeadersParser(http_message)
+    async def handle_request(self) -> bytes:
+        http_parser = HttpHeadersParser(self.http_message)
 
         if http_parser.method_name == HttpMethod.OPTIONS:
-            return await self._send_response_for_options_method()
+            return self._get_response_for_options_method()
 
         try:
-            controller = get_controller(http_parser.path, http_parser.method_name)
+            controller = get_controller(
+                http_parser.path, http_parser.method_name,
+            )
         except FindControllerError:
-            return await self._write_post_or_get_response_to_socket('404 not found')
+            return self._get_response_for_get_and_post_methods(
+                '404 not found'
+            )
 
         if http_parser.method_name == HttpMethod.POST:
             response = await self._get_response_for_post_method(
@@ -52,28 +52,17 @@ class HttpRequestHandler:
                 controller, http_parser.query_params,
             )
 
-        await self._write_post_or_get_response_to_socket(response)
+        return self._get_response_for_get_and_post_methods(response)
 
-    async def _write_post_or_get_response_to_socket(
-        self, response: str,
-    ) -> None:
+    @staticmethod
+    def _get_response_for_get_and_post_methods(response: str) -> bytes:
         headers = create_response_headers(200, content_type='application/json')
-        await self.event_loop.sock_sendall(
-            self.client_socket, (headers + response).encode('utf8'),
-        )
-        self.client_socket.close()
+        return (headers + response).encode('utf8')
 
-    async def _read_message_from_socket(self) -> str:
-        data = await self.event_loop.sock_recv(self.client_socket, 1024)
-        message = data.decode()
-        return message
-
-    async def _send_response_for_options_method(self) -> None:
+    @staticmethod
+    def _get_response_for_options_method() -> bytes:
         headers: str = create_response_headers(200, for_options=True)
-        await self.event_loop.sock_sendall(
-            self.client_socket, headers.encode('utf8'),
-        )
-        self.client_socket.close()
+        return headers.encode('utf8')
 
     async def _get_response_for_get_method(
         self, controller: Controller, query_params: dict,
@@ -178,8 +167,15 @@ class Backend:
         self.server_socket.bind(server_address)
 
     async def handle_request(self, client_socket: socket.socket) -> None:
-        handler = HttpRequestHandler(self.event_loop, client_socket)
-        await handler.handle_request()
+        message = b''
+        while chunk := await self.event_loop.sock_recv(client_socket, 1024):
+            message += chunk
+
+        handler = HttpMessageHandler(message)
+        message = await handler.handle_request()
+
+        await self.event_loop.sock_sendall(client_socket, message)
+        client_socket.close()
 
     async def main(self) -> None:
         """The method listen server socket for connections, if connection
