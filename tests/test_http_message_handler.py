@@ -54,3 +54,19 @@ async def test_existing_url(http_get_request, http_headers, content_type):
 
     assert response == http_headers
 
+
+@pytest.mark.asyncio
+async def test_options_method(http_get_request, http_headers):
+    http_get_request = (
+        http_get_request
+        .replace(b'GET', b'OPTIONS')
+        .replace(b'/users/', b'/test/')
+    )
+    http_headers = (
+        http_headers[:-1] +
+        b'Allow: OPTIONS, GET, POST\n\n'
+    )
+    handler = HttpMessageHandler(http_get_request)
+    response = await handler.handle_request()
+
+    assert response == http_headers
