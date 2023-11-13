@@ -1,4 +1,4 @@
-from typing import ParamSpecArgs, ParamSpecKwargs, Any
+from typing import Any, ParamSpecArgs, ParamSpecKwargs
 
 from marshmallow import Schema
 from marshmallow.decorators import post_dump

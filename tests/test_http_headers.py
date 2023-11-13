@@ -1,7 +1,6 @@
-from martin_eden.http_utils import (
-    HttpHeadersParser, create_response_headers,
-)
 import pytest
+
+from martin_eden.http_utils import HttpHeadersParser, create_response_headers
 from tests.conftest import base_http_request, base_http_result_headers
 
 

@@ -1,7 +1,11 @@
+import json
+
 import pytest
-from martin_eden.routing import register_route
+
 from martin_eden.core import HttpMessageHandler
-from tests.conftest import base_http_result_headers, base_http_request
+from martin_eden.http_utils import HttpHeadersParser
+from martin_eden.routing import register_route
+from tests.conftest import base_http_request, base_http_result_headers
 
 pytest_plugins = ('pytest_asyncio',)
 
@@ -70,3 +74,17 @@ async def test_options_method(http_get_request, http_headers):
     response = await handler.handle_request()
 
     assert response == http_headers
+
+
+@pytest.mark.asyncio
+async def test_openapi_schema(http_get_request):
+    http_get_request = http_get_request.replace(b'/users/', b'/schema/')
+
+    handler = HttpMessageHandler(http_get_request)
+    response = await handler.handle_request()
+
+    parser = HttpHeadersParser(response.decode('utf8'))
+    openapi_result = json.loads(parser.body)
+    assert openapi_result['paths'] == {
+        '/test/': {'get': {'operationId': 'test_get'}}
+    }

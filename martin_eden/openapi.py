@@ -4,12 +4,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from martin_eden.base import CustomJsonSchema, CustomSchema
-from martin_eden.utils import (
-    dict_set,
-    get_name_of_model,
-    get_operation_id_for_openapi,
-    get_python_field_type_from_alchemy_field,
-)
+from martin_eden.utils import (dict_set, get_name_of_model,
+                               get_operation_id_for_openapi,
+                               get_python_field_type_from_alchemy_field)
 
 if TYPE_CHECKING:
     from database import Base as BaseModel
