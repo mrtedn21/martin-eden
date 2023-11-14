@@ -171,6 +171,8 @@ class Backend:
         message = b''
         while chunk := await self.event_loop.sock_recv(client_socket, 1024):
             message += chunk
+            if len(chunk) < 1024:
+                break
 
         handler = HttpMessageHandler(message)
         message = await handler.handle_request()
