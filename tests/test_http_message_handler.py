@@ -1,20 +1,14 @@
 import json
 
 import pytest
+from sqlalchemy.orm import Mapped, mapped_column
 
-from typing import Iterable
 from martin_eden.core import HttpMessageHandler
-from martin_eden.database import Base, MarshmallowToDataclass, SqlAlchemyToMarshmallow
+from martin_eden.database import (Base, MarshmallowToDataclass,
+                                  SqlAlchemyToMarshmallow)
 from martin_eden.http_utils import HttpHeadersParser
 from martin_eden.routing import register_route
 from tests.conftest import base_http_request, base_http_result_headers
-from datetime import date
-from typing import TYPE_CHECKING
-
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from martin_eden.database import Base
 
 pytest_plugins = ('pytest_asyncio',)
 
@@ -38,15 +32,13 @@ class TestDataclass(TestSchema, metaclass=MarshmallowToDataclass):
     pass
 
 
-#@register_route(
-#    '/test_query/', 'get',
-#    response_schema=TestSchema(),
-#    query_params={TestModel: ['name']},
-#)
-#async def get_users(query_params: Iterable) -> str:
-#    print()
-#    print(query_params)
-#    return query_params
+@register_route(
+    '/test_query/', 'get',
+    response_schema=TestSchema(),
+    query_params={TestModel: ['name']},
+)
+async def get_users(query_params: list) -> str:
+    return str(query_params[0])
 
 
 @pytest.fixture
@@ -124,13 +116,14 @@ async def test_openapi_schema(http_get_request):
     }
 
 
-#@pytest.mark.asyncio
-#async def test_query_params(http_get_request):
-#    http_get_request = http_get_request.replace(
-#        b'/users/', b'/test_query/?test_model__name__like=martin',
-#    )
-#
-#    handler = HttpMessageHandler(http_get_request)
-#    response = await handler.handle_request()
-#
-#    print(response)
+@pytest.mark.asyncio
+async def test_query_params(http_get_request):
+    http_get_request = http_get_request.replace(
+        b'/users/', b'/test_query/?test__name__like=martin',
+    )
+
+    handler = HttpMessageHandler(http_get_request)
+    response = await handler.handle_request()
+
+    parser = HttpHeadersParser(response.decode('utf8'))
+    assert parser.body == 'test.name LIKE :name_1'
