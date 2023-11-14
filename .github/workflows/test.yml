@@ -1,4 +1,4 @@
-name: Test Coverage
+name: Testing
 
 on: ["push", "pull_request"]
 
@@ -26,12 +26,3 @@ jobs:
         PYTHONPATH=$(pwd)       
         export PYTHONPATH
         poetry run pytest
-
-    - name: Build
-      run: poetry build
-
-    - name: Publish
-      run: |
-        echo $PYPI_TOKEN
-        poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
-        poetry publish
