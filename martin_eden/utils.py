@@ -9,11 +9,11 @@ T = TypeVar('T')
 
 
 def get_name_of_model(model_class: 'BaseModel') -> str:
-    model_name = model_class.__name__
-    # remove "Orm" postfix from model name
-    model_name = model_name[:-3]
-    model_name = model_name.lower()
-    return model_name
+    return (
+        getattr(model_class, '__entity_name__', '') or
+        getattr(model_class, '__tablename__', '') or
+        getattr(model_class, '__name__', '')
+    )
 
 
 def get_argument_names(foo: Callable) -> tuple[str]:
