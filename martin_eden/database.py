@@ -38,7 +38,9 @@ def query_params_to_alchemy_filters(
     filters: dict, query_param: str, value: str,
 ) -> Any:
     """Example of query_param argument from url:
-        user__first_name__like=martin"""
+       * user__first_name__like=martin
+       * user__age__in=20,21,22
+       * user__age__exactly=25"""
     model_name, field_name, method_name = query_param.split('__')
 
     model_class = None
@@ -49,11 +51,15 @@ def query_params_to_alchemy_filters(
         return None
 
     field_obj = getattr(model_class, field_name)
-    method_obj = getattr(field_obj, method_name)
     if method_name == 'like':
+        method_obj = getattr(field_obj, method_name)
         return method_obj(f'%{value}%')
-    else:
-        return method_obj(value)
+    elif method_name == 'exactly':
+        method_obj = getattr(field_obj, 'in_')
+        return method_obj([int(value)])
+    elif method_name == 'in':
+        method_obj = getattr(field_obj, 'in_')
+        return method_obj(list(map(int, value.split(','))))
 
 
 class SqlAlchemyToMarshmallow(type(Base)):

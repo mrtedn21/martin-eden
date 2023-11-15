@@ -12,6 +12,14 @@ if TYPE_CHECKING:
     from database import Base as BaseModel
 
 
+# This dict needs to detect type of query param by filter name
+map_filter_name_to_type = {
+    'in': 'string',
+    'like': 'string',
+    'exactly': 'int',
+}
+
+
 class OpenApiBuilder:
     _instance = None
     SCHEMA_PATH_TEMPLATE = '#/components/schemas/{}'
@@ -122,7 +130,7 @@ class OpenApiBuilder:
         parameters = openapi_method.setdefault('parameters', [])
         for model_class, fields in query_params.items():
             for field_name in fields:
-                parameters.append(
+                parameters.extend(
                     self.generate_query_param_for_openapi(
                         model_class, field_name,
                     ),
@@ -132,36 +140,21 @@ class OpenApiBuilder:
         self, model_class: 'BaseModel', field_name: str,
     ) -> dict:
         model_name = get_name_of_model(model_class)
-        parameter_type_string = self.get_query_parameter_type_string(
+        python_field_type = get_python_field_type_from_alchemy_field(
             model_class, field_name,
         )
-        filter_name = self.get_filter_name_for_param_type(
-            parameter_type_string,
+        filter_names = self.get_filter_names_for_param_type(
+            python_field_type,
         )
-        return {
+        return [{
             'name': f'{model_name}__{field_name}__{filter_name}',
             'in': 'query',
-            'schema': {'type': parameter_type_string},
-        }
+            'schema': {'type': map_filter_name_to_type[filter_name]},
+        } for filter_name in filter_names]
 
     @staticmethod
-    def get_query_parameter_type_string(
-        model_class: 'BaseModel', field_name: str,
-    ) -> str:
-        python_type = get_python_field_type_from_alchemy_field(
-            model_class, field_name,
-        )
-        mapping = {
-            str: 'string',
-            int: 'integer',
-            datetime: 'string',
-            date: 'string',
-        }
-        return mapping[python_type]
-
-    @staticmethod
-    def get_filter_name_for_param_type(param_type: str) -> str:
-        return 'like' if param_type == 'string' else 'in'
+    def get_filter_names_for_param_type(param_type) -> list[str]:
+        return ['like'] if param_type is str else ['in', 'exactly']
 
     def add_openapi_path(
         self,

@@ -3,6 +3,7 @@
 # Host: localhost:8001
 # Connection: keep-alive
 from typing import Optional
+from urllib.parse import unquote
 
 
 class HttpMethod:
@@ -52,13 +53,14 @@ class HttpHeadersParser:
     def _get_path(self) -> str:
         """Path is second name in first line"""
         path, _ = self._get_path_and_query_params()
-        return path
+        return unquote(path)
 
     def _get_query_params(self) -> dict:
         _, query_params_str = self._get_path_and_query_params()
         if query_params_str is None:
             return {}
 
+        query_params_str = unquote(query_params_str)
         query_params = {}
         for query_param in query_params_str.split('&'):
             key, value = query_param.split('=')
