@@ -72,3 +72,12 @@ async def get_users(query_params: list) -> str:
 @register_route('/test/', 'get')
 async def get_openapi_schema() -> str:
     return 'test'
+
+
+@register_route(
+    '/test/', 'post',
+    request_schema=TestSchema(),
+    response_schema=TestSchema(),
+)
+async def create_test(test: TestDataclass) -> list[TestDataclass]:
+    return [test.pk, test.name, test.age]

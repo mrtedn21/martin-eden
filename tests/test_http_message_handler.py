@@ -84,8 +84,8 @@ async def test_openapi_schema(http_get_request):
         'name': 'test__name__like',
         'schema': {'type': 'string'},
     } in openapi_result['paths']['/test_query/']['get']['parameters']
-    assert openapi_result['paths']['/test/'] == {
-        'get': {'operationId': 'test_get'},
+    assert openapi_result['paths']['/test/']['get'] == {
+        'operationId': 'test_get'
     }
 
 
@@ -106,3 +106,18 @@ async def test_query_params(http_get_request, query_param_source, query_param_re
 
     parser = HttpHeadersParser(response.decode('utf8'))
     assert parser.body == query_param_result
+
+
+@pytest.mark.asyncio
+async def test_post_method(http_get_request):
+    http_get_request = (
+        http_get_request
+        .replace(b'/users/', b'/test/')
+        .replace(b'GET', b'POST')
+        + b'\n{"pk": 1, "name": "martin", "age": 30}'
+    )
+    handler = HttpMessageHandler(http_get_request)
+    response = await handler.handle_request()
+
+    parser = HttpHeadersParser(response.decode('utf8'))
+    assert parser.body == '[1, "martin", 30]'

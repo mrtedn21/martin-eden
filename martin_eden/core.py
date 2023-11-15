@@ -114,6 +114,8 @@ class HttpMessageHandler:
         response = await controller(**{
             dataclass_name: dataclass_from_dict(dataclass_object, request_data)
         })
+        if isinstance(response, (list, dict)):
+            response = json.dumps(response)
         response = self._response_of_controller_to_str(controller, response)
         return response
 
