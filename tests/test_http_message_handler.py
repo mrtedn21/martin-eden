@@ -1,44 +1,12 @@
 import json
 
 import pytest
-from sqlalchemy.orm import Mapped, mapped_column
 
 from martin_eden.core import HttpMessageHandler
-from martin_eden.database import (Base, MarshmallowToDataclass,
-                                  SqlAlchemyToMarshmallow)
 from martin_eden.http_utils import HttpHeadersParser
-from martin_eden.routing import register_route
 from tests.conftest import base_http_request, base_http_result_headers
 
 pytest_plugins = ('pytest_asyncio',)
-
-
-@register_route('/test/', 'get')
-async def get_openapi_schema() -> str:
-    return 'test'
-
-
-class TestModel(Base):
-    __tablename__ = 'test'
-    pk: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str]
-
-
-class TestSchema(TestModel, metaclass=SqlAlchemyToMarshmallow):
-    pass
-
-
-class TestDataclass(TestSchema, metaclass=MarshmallowToDataclass):
-    pass
-
-
-@register_route(
-    '/test_query/', 'get',
-    response_schema=TestSchema(),
-    query_params={TestModel: ['name']},
-)
-async def get_users(query_params: list) -> str:
-    return str(query_params[0])
 
 
 @pytest.fixture
@@ -111,19 +79,30 @@ async def test_openapi_schema(http_get_request):
 
     parser = HttpHeadersParser(response.decode('utf8'))
     openapi_result = json.loads(parser.body)
-    assert openapi_result['paths'] == {
-        '/test/': {'get': {'operationId': 'test_get'}}
+    assert {
+        'in': 'query',
+        'name': 'test__name__like',
+        'schema': {'type': 'string'},
+    } in openapi_result['paths']['/test_query/']['get']['parameters']
+    assert openapi_result['paths']['/test/'] == {
+        'get': {'operationId': 'test_get'},
     }
 
 
 @pytest.mark.asyncio
-async def test_query_params(http_get_request):
+@pytest.mark.parametrize('query_param_source, query_param_result', (
+    (b'test__name__like=martin', '["test.name LIKE :name_1"]'),
+    (b'test__age__exactly=123', '["test.age IN (__[POSTCOMPILE_age_1])"]'),
+    (b'test__age__in=123', '["test.age IN (__[POSTCOMPILE_age_1])"]'),
+    (b'test__age__in=123,345', '["test.age IN (__[POSTCOMPILE_age_1])"]'),
+))
+async def test_query_params(http_get_request, query_param_source, query_param_result):
     http_get_request = http_get_request.replace(
-        b'/users/', b'/test_query/?test__name__like=martin',
+        b'/users/', b'/test_query/?' + query_param_source
     )
 
     handler = HttpMessageHandler(http_get_request)
     response = await handler.handle_request()
 
     parser = HttpHeadersParser(response.decode('utf8'))
-    assert parser.body == 'test.name LIKE :name_1'
+    assert parser.body == query_param_result

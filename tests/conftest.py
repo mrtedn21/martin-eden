@@ -1,3 +1,10 @@
+import json
+from sqlalchemy.orm import Mapped, mapped_column
+
+from martin_eden.database import (Base, MarshmallowToDataclass,
+                                  SqlAlchemyToMarshmallow)
+from martin_eden.routing import register_route
+
 base_http_request = (
     'GET /users/ HTTP/1.1\n'
     'Host: localhost:8001\n'
@@ -35,3 +42,33 @@ base_http_result_headers = (
     'Access-Control-Allow-Credentials: true\n'
     'Access-Control-Max-Age: 86400\n\n'
 )
+
+
+class TestModel(Base):
+    __tablename__ = 'test'
+    __table_args__ = {'extend_existing': True}
+    pk: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    age: Mapped[int]
+
+
+class TestSchema(TestModel, metaclass=SqlAlchemyToMarshmallow):
+    pass
+
+
+class TestDataclass(TestSchema, metaclass=MarshmallowToDataclass):
+    pass
+
+
+@register_route(
+    '/test_query/', 'get',
+    response_schema=TestSchema(),
+    query_params={TestModel: ['name', 'age']},
+)
+async def get_users(query_params: list) -> str:
+    return json.dumps(list(map(str, query_params)))
+
+
+@register_route('/test/', 'get')
+async def get_openapi_schema() -> str:
+    return 'test'
