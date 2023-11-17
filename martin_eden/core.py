@@ -194,6 +194,6 @@ class Backend:
                 await self.event_loop.sock_accept(self.server_socket)
             )
             print(f'get request for connection from {client_address}')
-            await asyncio.create_task(
+            asyncio.create_task(
                 self.handle_request(client_socket),
             )

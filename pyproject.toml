@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "martin-eden"
-version = "0.9.11"
+version = "0.10"
 description = "async backend framework on sockets"
 authors = ["mrtedn21 <bezgin.sasha06@gmail.com>"]
 readme = "README.md"
