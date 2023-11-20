@@ -16,6 +16,7 @@ from martin_eden.routing import (ControllerDefinitionError,
                                  FindControllerError, get_controller,
                                  register_route)
 from martin_eden.utils import get_argument_names
+from martin_eden.settings import Settings
 
 db = DataBase()
 
@@ -165,7 +166,8 @@ class Backend:
             socket.SOL_SOCKET, socket.SO_REUSEADDR, 1,
         )
 
-        server_address = ('localhost', 8001)
+        settings = Settings()
+        server_address = (settings.server_host, settings.server_port)
         self.server_socket.setblocking(False)
         self.server_socket.bind(server_address)
 

@@ -2,6 +2,7 @@ import dataclasses
 from dataclasses import field, make_dataclass
 from datetime import date, datetime
 from typing import Any, Callable, Iterable
+from martin_eden.settings import Settings
 
 from marshmallow.fields import Date, DateTime, Int, Nested, Str
 from marshmallow_enum import EnumField as MarshmallowEnum
@@ -139,8 +140,9 @@ class MarshmallowToDataclass(type(CustomSchema)):
 
 class DataBase:
     def __init__(self) -> None:
+        settings = Settings()
         self.engine: AsyncEngine = create_async_engine(
-            'postgresql+asyncpg://alexander.bezgin:123@localhost/framework',
+            settings.postgres_url,
             echo=True,
         )
         self.create_session: Callable = async_sessionmaker(self.engine)

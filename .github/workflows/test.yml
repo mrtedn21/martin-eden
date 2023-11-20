@@ -2,8 +2,13 @@ name: Testing
 
 on: ["push", "pull_request"]
 
+env:
+  POSTGRES_URL: ${{ vars.POSTGRES_URL }}
+  SERVER_HOST: ${{ vars.SERVER_HOST }}
+  SERVER_PORT: ${{ vars.SERVER_PORT }}
+
 jobs:
-  test_and_publish:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
