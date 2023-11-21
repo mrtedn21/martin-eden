@@ -1,25 +1,32 @@
 import asyncio
-from logging import getLogger
 import dataclasses
-from martin_eden.logs import configure_logging
 import json
 import socket
 from asyncio import AbstractEventLoop
+from logging import getLogger
 from typing import Any, Optional
 
 from dacite import from_dict as dataclass_from_dict
 
 from martin_eden.base import Controller
 from martin_eden.database import DataBase, query_params_to_alchemy_filters
-from martin_eden.http_utils import (HttpHeadersParser, HttpMethod,
-                                    create_response_headers)
+from martin_eden.http_utils import (
+    HttpHeadersParser,
+    HttpMethod,
+    create_response_headers,
+)
+from martin_eden.logs import configure_logging
 from martin_eden.openapi import OpenApiBuilder
-from martin_eden.routing import (ControllerDefinitionError,
-                                 FindControllerError, get_controller,
-                                 register_route)
-from martin_eden.utils import get_argument_names
+from martin_eden.routing import (
+    ControllerDefinitionError,
+    FindControllerError,
+    get_controller,
+    register_route,
+)
 from martin_eden.settings import Settings
+from martin_eden.utils import get_argument_names
 
+HTTP_MESSAGE_CHUNK_SIZE = 1024
 db = DataBase()
 
 
@@ -185,7 +192,7 @@ class Backend:
         message = b''
         while chunk := await self.event_loop.sock_recv(client_socket, 1024):
             message += chunk
-            if len(chunk) < 1024:
+            if len(chunk) < HTTP_MESSAGE_CHUNK_SIZE:
                 break
 
         handler = HttpMessageHandler(message)

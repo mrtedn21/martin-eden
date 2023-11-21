@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "martin-eden"
-version = "0.10.4"
+version = "0.11.0"
 description = "async backend framework on sockets"
 authors = ["mrtedn21 <bezgin.sasha06@gmail.com>"]
 readme = "README.md"
@@ -11,8 +11,8 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.11"
-sqlalchemy = "^2.0.22"
-asyncpg = "^0.28.0"
+sqlalchemy = "^2.0.23"
+asyncpg = "^0.29.0"
 uvloop = "^0.19.0"
 alembic = "^1.12.1"
 psycopg2 = "^2.9.9"
@@ -26,6 +26,8 @@ ruff = "^0.0.287"
 pytest = "^7.4.3"
 coverage = "^7.3.2"
 pytest-asyncio = "^0.21.1"
+flake8 = "^6.1.0"
+isort = "^5.12.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -33,22 +35,18 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 select = [
-  "ANN",   # flake8-annotations
   "ARG",   # flake8-unused-arguments
   "ASYNC", # flake8-async
   "B",     # flake8-bugbear
   "C4",    # flake8-comprehensions
   "C90",   # mccabe
-  #"COM",   # flake8-commas
   "E",     # pycodestyle errors
   "F",     # pyflakes
-  "I",     # isort
   "N",     # pep8-naming
   "PERF",  # perflint
   "PGH",   # pygrep-hooks
   "PIE",   # flake8-pie
   "PL",    # pylint
-  "PT",    # flake8-pytest-style
   "PTH",   # flake8-use-pathlib
   "PYI",   # flake8-pyi
   "S",     # flake8-bandit
@@ -61,7 +59,6 @@ select = [
   "W",     # pycodestyle warnings
   "YTT",   # flake8-2020
 ]
-fixable = ["I"]
 ignore = [
   "ANN002",
   "ANN003",
@@ -72,5 +69,13 @@ ignore = [
   "TRY200",
   "PLR0913",
   "ANN401",
+  "S101",
 ]
 line-length = 79
+
+[tool.isort]
+line_length = 79
+profile = "black"
+known_first_party = "martin_eden"
+multi_line_output = 3
+include_trailing_comma = true

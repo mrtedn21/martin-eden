@@ -57,7 +57,7 @@ def test_not_empty_body(http_request):
     assert parser.body == '{"test: "test"}'
 
 
-@pytest.mark.parametrize('line_break_char', ('\r', '\r\n'))
+@pytest.mark.parametrize('line_break_char', ['\r', '\r\n'])
 def test_line_break_detect(http_request, line_break_char):
     parser = HttpHeadersParser(http_request)
     assert parser.line_break_char == '\n'

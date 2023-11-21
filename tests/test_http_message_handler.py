@@ -90,13 +90,15 @@ async def test_openapi_schema(http_get_request):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('query_param_source, query_param_result', (
+@pytest.mark.parametrize('query_param_source, query_param_result', [
     (b'test__name__like=martin', '["test.name LIKE :name_1"]'),
     (b'test__age__exactly=123', '["test.age IN (__[POSTCOMPILE_age_1])"]'),
     (b'test__age__in=123', '["test.age IN (__[POSTCOMPILE_age_1])"]'),
     (b'test__age__in=123,345', '["test.age IN (__[POSTCOMPILE_age_1])"]'),
-))
-async def test_query_params(http_get_request, query_param_source, query_param_result):
+])
+async def test_query_params(
+    http_get_request, query_param_source, query_param_result,
+):
     http_get_request = http_get_request.replace(
         b'/users/', b'/test_query/?' + query_param_source
     )
