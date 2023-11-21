@@ -1,8 +1,12 @@
 import json
+
 from sqlalchemy.orm import Mapped, mapped_column
 
-from martin_eden.database import (Base, MarshmallowToDataclass,
-                                  SqlAlchemyToMarshmallow)
+from martin_eden.database import (
+    Base,
+    MarshmallowToDataclass,
+    SqlAlchemyToMarshmallow,
+)
 from martin_eden.routing import register_route
 
 base_http_request = (

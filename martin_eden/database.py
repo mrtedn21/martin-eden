@@ -2,21 +2,27 @@ import dataclasses
 from dataclasses import field, make_dataclass
 from datetime import date, datetime
 from typing import Any, Callable, Iterable
-from martin_eden.settings import Settings
 
 from marshmallow.fields import Date, DateTime, Int, Nested, Str
 from marshmallow_enum import EnumField as MarshmallowEnum
-from sqlalchemy.ext.asyncio import (AsyncAttrs, AsyncEngine,
-                                    async_sessionmaker, create_async_engine)
+from sqlalchemy.ext.asyncio import (
+    AsyncAttrs,
+    AsyncEngine,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase
 
 from martin_eden.base import CustomSchema
-from martin_eden.utils import (get_name_of_model,
-                               get_python_field_type_from_alchemy_field,
-                               is_enum_alchemy_field,
-                               is_property_secondary_relation,
-                               is_simple_alchemy_field,
-                               is_special_alchemy_field)
+from martin_eden.settings import Settings
+from martin_eden.utils import (
+    get_name_of_model,
+    get_python_field_type_from_alchemy_field,
+    is_enum_alchemy_field,
+    is_property_secondary_relation,
+    is_simple_alchemy_field,
+    is_special_alchemy_field,
+)
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -56,10 +62,10 @@ def query_params_to_alchemy_filters(
         method_obj = getattr(field_obj, method_name)
         return method_obj(f'%{value}%')
     elif method_name == 'exactly':
-        method_obj = getattr(field_obj, 'in_')
+        method_obj = field_obj.in_
         return method_obj([int(value)])
     elif method_name == 'in':
-        method_obj = getattr(field_obj, 'in_')
+        method_obj = field_obj.in_
         return method_obj(list(map(int, value.split(','))))
 
 
