@@ -19,5 +19,5 @@ def read_str(var_name, default=None):
 class Settings:
     server_host = read_str('SERVER_HOST')
     server_port = read_int('SERVER_PORT')
-
     postgres_url = read_str('POSTGRES_URL')
+    log_level = read_str('LOG_LEVEL')

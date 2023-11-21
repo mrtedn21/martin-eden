@@ -6,6 +6,7 @@ env:
   POSTGRES_URL: ${{ vars.POSTGRES_URL }}
   SERVER_HOST: ${{ vars.SERVER_HOST }}
   SERVER_PORT: ${{ vars.SERVER_PORT }}
+  LOG_LEVEL: ${{ vars.LOG_LEVEL }}
 
 jobs:
   test:

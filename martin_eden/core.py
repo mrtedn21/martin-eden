@@ -1,5 +1,7 @@
 import asyncio
+from logging import getLogger
 import dataclasses
+from martin_eden.logs import configure_logging
 import json
 import socket
 from asyncio import AbstractEventLoop
@@ -155,8 +157,14 @@ class Backend:
     def __init__(self) -> None:
         self.event_loop: Optional[AbstractEventLoop] = None
         self.server_socket: Optional[socket.socket] = None
+
+        self.settings = Settings()
+        configure_logging(self.settings.log_level)
+        self.logger = getLogger()
+
         self._configure_sockets()
         OpenApiBuilder().write_marshmallow_schemas_to_openapi_doc()
+        self.logger.info('Backend has initialized')
 
     def _configure_sockets(self) -> None:
         self.server_socket = socket.socket(
@@ -166,8 +174,10 @@ class Backend:
             socket.SOL_SOCKET, socket.SO_REUSEADDR, 1,
         )
 
-        settings = Settings()
-        server_address = (settings.server_host, settings.server_port)
+        server_address = (
+            self.settings.server_host,
+            self.settings.server_port,
+        )
         self.server_socket.setblocking(False)
         self.server_socket.bind(server_address)
 
@@ -182,20 +192,26 @@ class Backend:
         message = await handler.handle_request()
 
         await self.event_loop.sock_sendall(client_socket, message)
+        self.logger.info(
+            f'request from {client_socket.getpeername()} has handled'
+        )
         client_socket.close()
 
     async def main(self) -> None:
         """The method listen server socket for connections, if connection
-        is gotten, creates client_socket and sends response to it."""
+        is gotten, creates client_socket and sends response in it."""
 
         # Getting of event loop in main because it must be in asyncio.run
         self.event_loop = asyncio.get_event_loop()
         self.server_socket.listen()
         while True:
-            client_socket, client_address = (
+            client_socket, _ = (
                 await self.event_loop.sock_accept(self.server_socket)
             )
-            print(f'get request for connection from {client_address}')
+            self.logger.info(
+                f'get request for connection '
+                f'from {client_socket.getpeername()}'
+            )
             asyncio.create_task(
                 self.handle_request(client_socket),
             )
